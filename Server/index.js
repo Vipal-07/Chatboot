@@ -36,7 +36,7 @@ app.route("/logout")
     .get( usersController.logoutFunction)        
 
 app.get('/', (req, res) => {
-    res.send('Hello World!');
+    res.send('Hello World! 132');
 })
 
 app.listen(5000, () => {
