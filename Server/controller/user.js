@@ -1,46 +1,136 @@
-module.exports.signUpFunction = async (req, res, next) => {
-    try { 
-        let { firstname, lastname, username, password } = req.body
-        const newUser = new User({ firstname, lastname, username })
-        let exitingUser = await User.findOne({
-           username : username
-        })
+const User = require("../models/userSchema.js");
+const jwt = require('jsonwebtoken')
+const bcryptjs = require('bcryptjs')
+
+module.exports.signUpFunction = async (req, res) => {
+
+    try {
+        const { name, username , password} = req.body
+
+        const exitingUser = await User.findOne({ username }) //{ name,email}  // null
+
         if(exitingUser){
-            res.redirect("/signup")
-            return  // if email exists, return to login page and stop here
+            return res.status(400).json({
+                message : "Already user exits",
+                error : true,
+            })
         }
-        const registerUser = await User.register(newUser, password) 
-        req.login(registerUser, (err) => {
-            if (err) {
-                return next(err)
-            }
-           
+
+        const salt = await bcryptjs.genSalt(10)
+        const hashpassword = await bcryptjs.hash(password,salt)
+
+        const payload = {
+            name:name,
+            username:username,
+            password : hashpassword
+        }
+
+        const user = new User(payload)
+        const userSave = await user.save()
+
+        return res.status(201).json({
+            message : "User created successfully",
+            data : userSave,
+            success : true
+        })
+
+    } catch (error) {
+        return res.status(500).json({
+            message : error.message || error,
+            error : true
         })
     }
-    catch (e) {
-        req.flash("error", e.message)
-        res.redirect("/signup")
+}
+
+
+
+
+
+
+module.exports.logoutFunction = async (req,res)=>{
+    try {
+        const cookieOptions = {
+            http : true,
+            secure : true,
+            sameSite : 'None'
+        }
+
+        return res.cookie('token','',cookieOptions).status(200).json({
+            message : "session out",
+            success : true
+    })
+    } catch (error) {
+        return res.status(500).json({
+            message : error.message || error,
+            error : true
+        })
     }
 }
 
-module.exports.profile = async(req, res) => {
-    // console.log(req.user.id)
-    let profileId = req.user.id
-    let user = await User.findById(profileId)
-}
 
-module.exports.postLoginPage = async (req, res) => {
-    req.flash("success", "You have been logged in successfully")
-    let redirectUrl = res.locals.redirectUrl || "/listings"
-    res.redirect(redirectUrl)
-}
+module.exports.loginFunction = async(req,res) =>{
+    try {
+        const { username, password } = req.body
 
-module.exports.logoutFunction = (req, res, next) => {
-    req.logout((err) => {
-        if (err) {
-            return next(err)
+        const user = await User.findOne({username})
+
+        const verifyPassword = await bcryptjs.compare(password,user.password)
+
+        if(!verifyPassword){
+            return res.status(400).json({
+                message : "Please check password",
+                error : true
+            })
         }
-        res.redirect("/listings")
-    })
+
+        const tokenData = {
+            id : user._id,
+            username : user.username 
+        }
+        const token = await jwt.sign(tokenData, process.env.TOKEN_SCRETE, { expiresIn : '1d'})
+
+        const cookieOptions = {
+            http : true,
+            secure : true,
+            sameSite : 'none'
+        }
+
+        return res.cookie('token',token,cookieOptions).status(200).json({
+            message : "Login successfully",
+            token : token,
+            success :true
+        })
+
+    } catch (error) {
+        return res.status(500).json({
+            message : error.message || error,
+            error : true
+        })
+    }
 }
 
+module.exports.getUser = async (req, res) => {
+    try {
+        const {username} = req.body
+        const user = await User.findOne({ username })
+        if(!user){
+            return res.status(404).json({
+                message : "User not found",
+                error : true
+            })
+        }
+
+        return res.status(201).json({
+            message : "User exists",
+            data : user,
+            success : true
+        })
+        
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message || error,
+            error: true
+        })
+        
+    }
+}

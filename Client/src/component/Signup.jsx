@@ -19,11 +19,9 @@ const navigate = useNavigate()
 
   const handleSubmit = async(e) => {
     e.preventDefault();
-    // Handle signup logic here
     const URL = "http://localhost:5000/signup"
     try {
       const response = await axios.post(URL, data);
-      console.log("response", response);
        toast.success(response.data.message)
        if(response.data.success){
             setData({
@@ -36,9 +34,7 @@ const navigate = useNavigate()
 
         }
     } catch (error) {
-      //  toast.error(error?.response?.data?.message)
-      // console.error("Error during signup:", error);
-      alert("User already exist");
+       toast.error(error?.response?.data?.message || "Signup failed. Please try again.");
     } 
   };
 

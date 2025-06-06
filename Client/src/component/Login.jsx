@@ -17,13 +17,12 @@ export default function Login() {
 
   const handleSubmit = async(e) => {
     e.preventDefault();
-    // Handle login logic here
     const URL = "http://localhost:5000/login";
     try {
      const response = await axios.post(URL,data, { withCredentials: true })
-         console.log("response", response)
        toast.success(response.data.message)
        if(response.data.success){
+         localStorage.setItem('token',response?.data?.token)
             setData({
               username : "",
               password : "",
@@ -33,8 +32,7 @@ export default function Login() {
 
         }
     } catch (error) {
-      console.error("Error during login:", error);
-      alert("Login failed");
+     toast.error(error?.response?.data?.message || "Login failed. Please try again.");
     }
   };
 

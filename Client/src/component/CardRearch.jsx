@@ -4,8 +4,6 @@ import Button from "@mui/material/Button";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { use } from "passport";
-// import { inputAdornmentClasses } from "@mui/material";
 
 export default function Chat() {
   const [data, setData] = useState({
@@ -29,17 +27,14 @@ export default function Chat() {
     try {
 
       const response = await axios.post(URL,data)
-      console.log("data", data);
-      console.log("response", response.data.data._id);
       const id = response.data.data._id;
       toast.success(response.data.message)
       if (response.data.success) {
         setData("");
-         navigate('/massagePage/' + id)
+         navigate('/card/' + id)
       }
     } catch (error) {
-      console.error("Error during searching user:", error);
-      alert("User does't exist");
+     toast.error(error?.response?.data?.message || "Failed to send message. Please try again.");
     }
   };
 
