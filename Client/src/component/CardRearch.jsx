@@ -23,7 +23,7 @@ export default function Chat() {
       return;
 
     }
-    const URL = "https://chatboot-05p9.onrender.com ";
+    const URL = "https://chatboot-05p9.onrender.com";
     try {
 
       const response = await axios.post(URL + "/card",data)
