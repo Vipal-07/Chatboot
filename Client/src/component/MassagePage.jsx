@@ -25,7 +25,7 @@ const MassagePage = () => {
   const params = useParams()
   const socketRef = useRef();
   useEffect(() => {
-    socketRef.current = io("http://localhost:5000", {
+    socketRef.current = io("https://chatboot-05p9.onrender.com", {
       auth: {
         token: localStorage.getItem('token')
       },
