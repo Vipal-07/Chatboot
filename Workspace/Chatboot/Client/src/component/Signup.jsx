@@ -1,3 +1,4 @@
+// filepath: /home/vikas07/Public/Chatboot/Client/src/component/Signup.jsx
 import React, { useState } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -5,86 +6,75 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-
-export default function Chat() {
+export default function Signup() {
   const [data, setData] = useState({
+    name: "",
     username: "",
+    password: ""
   });
 
-  const navigate = useNavigate()
-
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  navigate("/login");
-};
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
   };
 
-
-  
-
-
-  const handleSend = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // e.stopPropagation();
-    if (!data.username.trim()) {
-      alert("Please enter a username.");
+    if (!data.name.trim() || !data.username.trim() || !data.password.trim()) {
+      toast.error("Please fill in all fields.");
       return;
-
     }
-<<<<<<< HEAD
-    const URL = "https://chatboot-05p9.onrender.com";
-    try {
 
-      const response = await axios.post(URL + "/card",data)
-=======
-    const URL = "http://localhost:5000/card";
+    const URL = "http://localhost:5000/signup";
     try {
-
-      const response = await axios.post(URL, data)
->>>>>>> 75bab71 (offline-Server)
-      const id = response.data.data._id;
-      toast.success(response.data.message)
+      const response = await axios.post(URL, data);
+      toast.success(response.data.message);
       if (response.data.success) {
-        setData("");
-        navigate('/card/' + id)
+        navigate('/login');
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to send message. Please try again.");
+      toast.error(error?.response?.data?.message || "Failed to sign up. Please try again.");
     }
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center overflow-hidden relative">
-      
-       <div className="absolute top-4 right-4">
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full font-semibold transition"
-          title="Logout"
-        >
-          Logout
-        </button>
-      </div>
-      
-      <div
-        className="backdrop-blur-md bg-white/20 rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-sm md:max-w-md border border-white/30"
-        style={{
-          boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
-          border: "1px solid rgba(255, 255, 255, 0.18)",
-        }}
-      >
+      <div className="backdrop-blur-md bg-white/20 rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-sm md:max-w-md border border-white/30">
         <h2 className="text-2xl sm:text-3xl font-bold text-black mb-4 sm:mb-6 text-center drop-shadow">
-          Chat with your partner
+          Create an Account
         </h2>
-        <form onSubmit={handleSend} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <TextField
+            value={data.name}
+            name="name"
+            onChange={handleChange}
+            placeholder="Enter your name"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              className: "bg-white/60 rounded",
+            }}
+            size="small"
+          />
           <TextField
             value={data.username}
             name="username"
             onChange={handleChange}
-            placeholder="Write your partner Username ..."
+            placeholder="Choose a username"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              className: "bg-white/60 rounded",
+            }}
+            size="small"
+          />
+          <TextField
+            type="password"
+            value={data.password}
+            name="password"
+            onChange={handleChange}
+            placeholder="Create a password"
             variant="outlined"
             fullWidth
             InputProps={{
@@ -108,10 +98,9 @@ const handleLogout = () => {
               },
             }}
           >
-            Continue
+            Sign Up
           </Button>
         </form>
-
       </div>
     </div>
   );

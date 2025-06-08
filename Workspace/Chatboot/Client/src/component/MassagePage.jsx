@@ -1,8 +1,8 @@
+// filepath: /home/vikas07/Public/Chatboot/Client/src/component/MassagePage.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import ScrollToBottom from 'react-scroll-to-bottom';
-
 
 const MassagePage = () => {
   const [userDetail, setUserDetail] = useState({
@@ -10,19 +10,19 @@ const MassagePage = () => {
     name: "",
     username: "",
     profile_pic: "",
-  })
+  });
   const [isOnline, setIsOnline] = useState(false);
   const [currentUser, setCurrentUser] = useState({
     _id: "",
     name: "",
     username: "",
     profile_pic: "",
-  })
+  });
   const [massage, setMassage] = useState({
     text: ""
-  })
+  });
   const [allMassage, setAllMassage] = useState([]);
-  const params = useParams()
+  const params = useParams();
   const socketRef = useRef();
   const navigate = useNavigate();
 
@@ -32,7 +32,7 @@ const MassagePage = () => {
   };
 
   useEffect(() => {
-    socketRef.current = io("https://chatboot-05p9.onrender.com", {
+    socketRef.current = io("http://localhost:5000", {
       auth: {
         token: localStorage.getItem('token')
       },
@@ -42,23 +42,28 @@ const MassagePage = () => {
     });
     socketRef.current.on('currentUser-details', (data) => {
       setCurrentUser(data);
-    })
+    });
     const handleOnlineStatus = (data) => {
       if (data.userId === params.userId) {
         setIsOnline(data.isOnline);
       }
     };
     socketRef.current.on('user-online-status', handleOnlineStatus);
+    
+    // Request pending messages when connected
     socketRef.current.on("connect", () => {
       if (params.userId) {
         socketRef.current.emit('get-user-details', params.userId);
+        socketRef.current.emit('get-pending-messages', currentUser._id);
       }
-    })
+    });
+    
     socketRef.current.emit('check-user-online', params.userId);
+    
     return () => {
       socketRef.current.off('user-online-status', handleOnlineStatus);
       socketRef.current.disconnect();
-    }
+    };
   }, [params.userId, socketRef]);
 
   useEffect(() => {
@@ -66,10 +71,11 @@ const MassagePage = () => {
       setAllMassage((prev) => [...prev, data]);
     };
     socketRef.current.on('receive-massage', handler);
+    
     return () => {
       socketRef.current.off('receive-massage', handler);
     };
-  }, [])
+  }, []);
 
   if (currentUser._id === params.userId) {
     return (
@@ -111,13 +117,12 @@ const MassagePage = () => {
           text: massage.text,
           timestamp: new Date().toISOString(),
         };
-        socketRef.current.emit("send-massage", messageObj)
+        socketRef.current.emit("send-massage", messageObj);
         setMassage({
           text: ""
-        })
+        });
       }
     }
-
   }
 
   const handleChange = (e) => {
@@ -125,8 +130,8 @@ const MassagePage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center bg-gray-900 justify-center  overflow-hidden">
-      <div className="w-full max-w-4xl h-[95vh] bg-gray-900 rounded-xl shadow-lg flex flex-col  overflow-hidden">
+    <div className="min-h-screen w-full flex items-center bg-gray-900 justify-center overflow-hidden">
+      <div className="w-full max-w-4xl h-[95vh] bg-gray-900 rounded-xl shadow-lg flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b">
           <div className="flex items-center gap-4">
             <img
@@ -170,7 +175,6 @@ const MassagePage = () => {
               <React.Fragment key={index}>
                 {showDay}
                 <div
-                  key={index}
                   className={`flex items-end ${isCurrentUser ? "justify-end" : "justify-start"} mb-4 mt-2`}
                 >
                   {!isCurrentUser && (

@@ -8,6 +8,7 @@ const User = require("./models/userSchema.js");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const cors = require('cors');
+const redis = require('redis');
 const cookiesParser = require('cookie-parser')
 const ConversationModel = require('./models/communicationSchema.js');
 const httpServer = createServer(app);
@@ -19,9 +20,20 @@ app.use(cookiesParser())
 
 
 app.use(cors({
+<<<<<<< HEAD
     origin: 'https://chat-boot-9yl6.onrender.com', 
+=======
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+>>>>>>> 75bab71 (offline-Server)
     credentials: true,
 }));
+
+const redisClient = redis.createClient();
+
+redisClient.connect().then(() => {
+    console.log('Connected to Redis');
+}).catch(console.error);
 
 const onlineUsers = new Map();
 
@@ -44,15 +56,10 @@ const io = new Server(httpServer, {
     }
 });
 io.on('connection', async (socket) => {
-    console.log('A user connected:', socket.id);
-
-
     const token = socket.handshake.auth.token
 
     const currentUser = await UserDetailsByToken(token)
     socket.join(currentUser?._id.toString());
-
-
 
     onlineUsers.set(currentUser._id.toString(), true);
     io.emit('user-online-status', { userId: currentUser._id, isOnline: true });
@@ -76,6 +83,15 @@ io.on('connection', async (socket) => {
         socket.emit('user-online-status', { userId, isOnline });
     });
 
+    redisClient.lRange(`offline_msgs:${currentUser._id}`, 0, -1).then(async (messages) => {
+        if (messages && messages.length > 0) {
+            messages.forEach((msg) => {
+                socket.emit('receive-massage', JSON.parse(msg));
+            });
+            await redisClient.del(`offline_msgs:${currentUser._id}`);
+        }
+    });
+
     socket.on('send-massage', async (data) => {
         let conversation = await ConversationModel.findOne({
             "$or": [
@@ -95,9 +111,13 @@ io.on('connection', async (socket) => {
         const { sender, receiver, text } = data;
 
         if (sender && receiver && text) {
-            io.to(receiver).emit('receive-massage', data);
+            if (onlineUsers.has(receiver)) {
+                io.to(receiver).emit('receive-massage', data);
+            } else {
+                await redisClient.rPush(`offline_msgs:${receiver}`, JSON.stringify(data));
+            }
             io.to(sender).emit('receive-massage', data);
-        } 
+        }
 
     })
 

@@ -39,7 +39,7 @@ const navigate = useNavigate()
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center ">
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden">
       <div
         className="backdrop-blur-md bg-white/20 rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-sm md:max-w-md border border-white/30"
         style={{

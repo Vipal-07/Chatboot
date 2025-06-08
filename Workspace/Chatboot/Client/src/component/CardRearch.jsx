@@ -1,3 +1,4 @@
+// filepath: /home/vikas07/Public/Chatboot/Client/src/component/CardRearch.jsx
 import React, { useState } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -5,51 +6,36 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-
-export default function Chat() {
+export default function CardRearch() {
   const [data, setData] = useState({
     username: "",
   });
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  navigate("/login");
-};
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
 
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
   };
 
-
-  
-
-
   const handleSend = async (e) => {
     e.preventDefault();
-    // e.stopPropagation();
     if (!data.username.trim()) {
       alert("Please enter a username.");
       return;
-
     }
-<<<<<<< HEAD
-    const URL = "https://chatboot-05p9.onrender.com";
-    try {
-
-      const response = await axios.post(URL + "/card",data)
-=======
     const URL = "http://localhost:5000/card";
     try {
-
-      const response = await axios.post(URL, data)
->>>>>>> 75bab71 (offline-Server)
+      const response = await axios.post(URL, data);
       const id = response.data.data._id;
-      toast.success(response.data.message)
+      toast.success(response.data.message);
       if (response.data.success) {
-        setData("");
-        navigate('/card/' + id)
+        setData({ username: "" }); // Reset the input field
+        navigate('/card/' + id);
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to send message. Please try again.");
@@ -58,8 +44,7 @@ const handleLogout = () => {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center overflow-hidden relative">
-      
-       <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4">
         <button
           onClick={handleLogout}
           className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full font-semibold transition"
@@ -68,7 +53,6 @@ const handleLogout = () => {
           Logout
         </button>
       </div>
-      
       <div
         className="backdrop-blur-md bg-white/20 rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-sm md:max-w-md border border-white/30"
         style={{
@@ -111,7 +95,6 @@ const handleLogout = () => {
             Continue
           </Button>
         </form>
-
       </div>
     </div>
   );
