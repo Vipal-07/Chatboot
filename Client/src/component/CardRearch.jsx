@@ -34,17 +34,14 @@ const handleLogout = () => {
       return;
 
     }
-<<<<<<< HEAD
+
     const URL = "https://chatboot-05p9.onrender.com";
     try {
 
       const response = await axios.post(URL + "/card",data)
-=======
-    const URL = "http://localhost:5000/card";
-    try {
 
-      const response = await axios.post(URL, data)
->>>>>>> 75bab71 (offline-Server)
+  
+
       const id = response.data.data._id;
       toast.success(response.data.message)
       if (response.data.success) {
