@@ -20,12 +20,9 @@ app.use(cookiesParser())
 
 
 app.use(cors({
-<<<<<<< HEAD
+
     origin: 'https://chat-boot-9yl6.onrender.com', 
-=======
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST'],
->>>>>>> 75bab71 (offline-Server)
+
     credentials: true,
 }));
 
