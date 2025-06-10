@@ -16,11 +16,11 @@ const userSchema = new Schema({
         type: 'string',
         required: true,
     },
-    profile_pic : {
-        type : 'string',
-        default : ""
+    profilePic: {
+        type: 'string',
+        default: ""
     },
-     timestamps : {
+    timestamps: {
         type: 'Boolean',
         default: true,
      } 

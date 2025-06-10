@@ -35,13 +35,11 @@ const handleLogout = () => {
 
     }
 
+
     const URL = "https://chatboot-05p9.onrender.com";
     try {
 
       const response = await axios.post(URL + "/card",data)
-
-  
-
       const id = response.data.data._id;
       toast.success(response.data.message)
       if (response.data.success) {

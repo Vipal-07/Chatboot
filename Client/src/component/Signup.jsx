@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import {  Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -11,31 +11,62 @@ export default function Signup() {
     name: "",
     username: "",
     password: "",
+    profilePic: "",
   });
-const navigate = useNavigate()
+  const [uploading, setUploading] = useState(false); // For upload state
+  const navigate = useNavigate()
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async(e) => {
-    e.preventDefault();
-    const URL = "https://chatboot-05p9.onrender.com"
+  // Cloudinary upload handler
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "Upload_Profile");
+    formData.append("cloud_name", "dfeimiswp");
+
+    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dfeimiswp/image/upload";
+
     try {
-      const response = await axios.post(URL + "/signup" , data);
-       toast.success(response.data.message)
-       if(response.data.success){
-            setData({
-              name : "",
-              username : "",
-              password : "",
-            })
+      const res = await axios.post(
+        CLOUDINARY_URL,
+        formData,
+        // {withCredentials: true }
+      );
+      setData({ ...data, profilePic: res.data.secure_url });
+      console.log("Image uploaded:", res.data.secure_url);
+      toast.success("Profile picture uploaded!");
+    } catch (err) {
+      toast.error("Failed to upload image.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
-            navigate('/card')
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const URL =  "http://localhost:5000";
+    try {
+      const response = await axios.post(URL + "/signup", data);
+      toast.success(response.data.message)
+      if (response.data.success) {
+        setData({
+          name: "",
+          username: "",
+          password: "",
+          profilePic: "",
+        })
 
-        }
+        navigate('/card')
+
+      }
     } catch (error) {
-       toast.error(error?.response?.data?.message || "Signup failed. Please try again.");
-    } 
+      toast.error(error?.response?.data?.message || "Signup failed. Please try again.");
+    }
   };
 
   return (
@@ -65,14 +96,14 @@ const navigate = useNavigate()
             size="small"
           />
           <TextField
-            
+
             label="Username"
             name="username"
             value={data.username}
             onChange={handleChange}
             variant="outlined"
             fullWidth
-             InputProps={{
+            InputProps={{
               className: "bg-white/60 rounded mb-2 sm:mb-4",
             }}
             size="small"
@@ -85,11 +116,31 @@ const navigate = useNavigate()
             onChange={handleChange}
             variant="outlined"
             fullWidth
-             InputProps={{
+            InputProps={{
               className: "bg-white/60 rounded mb-2 sm:mb-4 text-black",
             }}
             size="small"
           />
+          {/* Profile Picture Upload */}
+          <div>
+            <label className="block mb-1 font-medium text-black">Profile Picture</label>
+            <input
+              type="file"
+              accept="image/*"
+              name="profilePic"
+              onChange={handleImageChange}
+              disabled={uploading}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+            />
+            {uploading && <div className="text-xs text-gray-600 mt-1">Uploading...</div>}
+            {data.profilePic && (
+              <img
+                src={data.profilePic}
+                alt="Profile Preview"
+                className="mt-2 rounded-full w-16 h-16 object-cover border"
+              />
+            )}
+          </div>
           <Button
             type="submit"
             variant="contained"
@@ -107,16 +158,17 @@ const navigate = useNavigate()
                 background: "linear-gradient(90deg, #fbc2eb 0%, #a18cd1 100%)",
               },
             }}
+            disabled={uploading}
           >
             Sign Up
           </Button>
         </form>
-       <div className="text-center text-sm sm:text-base">
+        <div className="text-center text-sm sm:text-base">
           Already have an account?{" "}
           <Link to="/login" className="text-blue-600 hover:underline">Log In</Link>
         </div>
       </div>
-      
+
     </div>
   );
 }

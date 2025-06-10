@@ -9,14 +9,14 @@ const MassagePage = () => {
     _id: "",
     name: "",
     username: "",
-    profile_pic: "",
+    profilePic: "",
   })
   const [isOnline, setIsOnline] = useState(false);
   const [currentUser, setCurrentUser] = useState({
     _id: "",
     name: "",
     username: "",
-    profile_pic: "",
+    profilePic: "",
   })
   const [massage, setMassage] = useState({
     text: ""
@@ -32,7 +32,7 @@ const MassagePage = () => {
   };
 
   useEffect(() => {
-    socketRef.current = io("https://chatboot-05p9.onrender.com", {
+    socketRef.current = io( "http://localhost:5000", {
       auth: {
         token: localStorage.getItem('token')
       },
@@ -130,7 +130,7 @@ const MassagePage = () => {
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b">
           <div className="flex items-center gap-4">
             <img
-              src={userDetail.profile_pic || "https://randomuser.me/api/portraits/women/44.jpg"}
+              src={userDetail.profilePic}
               alt="Profile"
               className="w-10 h-10 rounded-full"
             />
@@ -175,7 +175,7 @@ const MassagePage = () => {
                 >
                   {!isCurrentUser && (
                     <img
-                      src={userDetail.profile_pic || "https://randomuser.me/api/portraits/women/44.jpg"}
+                      src={userDetail.profilePic || "https://randomuser.me/api/portraits/women/44.jpg"}
                       className="w-8 h-8 rounded-full mr-3"
                       alt="User"
                     />
@@ -196,7 +196,7 @@ const MassagePage = () => {
                   </div>
                   {isCurrentUser && (
                     <img
-                      src={currentUser.profile_pic || "https://randomuser.me/api/portraits/men/44.jpg"}
+                      src={currentUser.profilePic || "https://randomuser.me/api/portraits/men/44.jpg"}
                       className="w-8 h-8 rounded-full ml-2"
                       alt="Me"
                     />

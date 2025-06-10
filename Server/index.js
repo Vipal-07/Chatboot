@@ -20,9 +20,7 @@ app.use(cookiesParser())
 
 
 app.use(cors({
-
-    origin: 'https://chat-boot-9yl6.onrender.com', 
-
+    origin: 'https://chat-boot-9yl6.onrender.com',
     credentials: true,
 }));
 
@@ -51,7 +49,7 @@ main()
 
 const io = new Server(httpServer, {
     cors: {
-        origin: 'https://chat-boot-9yl6.onrender.com',
+        origin: 'http://localhost:5173',
         credentials: true,
     }
 });
@@ -73,7 +71,7 @@ io.on('connection', async (socket) => {
                 _id: user._id,
                 name: user.name,
                 username: user.username,
-                profile_pic: user.profile_pic,
+                profilePic: user.profilePic,
             });
         }
     });

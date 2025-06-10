@@ -5,7 +5,7 @@ const bcryptjs = require('bcryptjs')
 module.exports.signUpFunction = async (req, res) => {
 
     try {
-        const { name, username , password} = req.body
+        const { name, username , password, profilePic } = req.body
 
         const exitingUser = await User.findOne({ username }) //{ name,email}  // null
 
@@ -22,7 +22,8 @@ module.exports.signUpFunction = async (req, res) => {
         const payload = {
             name:name,
             username:username,
-            password : hashpassword
+            password : hashpassword,
+            profilePic: profilePic
         }
 
         const user = new User(payload)

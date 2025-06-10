@@ -17,7 +17,7 @@ export default function Login() {
 
   const handleSubmit = async(e) => {
     e.preventDefault();
-    const URL = "https://chatboot-05p9.onrender.com";
+    const URL = "http://localhost:5000";
     try {
      const response = await axios.post(URL + "/login" ,data, { withCredentials: true })
        toast.success(response.data.message)
