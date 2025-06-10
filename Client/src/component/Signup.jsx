@@ -49,7 +49,7 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const URL =  "http://localhost:5000";
+    const URL =  "https://chatboot-05p9.onrender.com";
     try {
       const response = await axios.post(URL + "/signup", data);
       toast.success(response.data.message)
