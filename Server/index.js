@@ -99,7 +99,7 @@ io.on('connection', async (socket) => {
         })
 
         if (!conversation) {
-            const createConversation = await ConversationModel({
+            const createConversation = new ConversationModel({
                 sender: data?.sender,
                 receiver: data?.receiver
             })
