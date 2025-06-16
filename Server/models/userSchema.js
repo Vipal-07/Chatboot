@@ -18,7 +18,7 @@ const userSchema = new Schema({
     },
     profilePic: {
         type: String,
-        default: ""
+        default: "https://i.pinimg.com/736x/4d/37/13/4d37132904667bb194a25dcfc398d8fa.jpg"
     },
     timestamps: {
         type: 'Boolean',
