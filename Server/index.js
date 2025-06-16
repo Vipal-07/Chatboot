@@ -91,21 +91,6 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('send-massage', async (data) => {
-        let conversation = await ConversationModel.findOne({
-            "$or": [
-                { sender: data?.sender, receiver: data?.receiver },
-                { sender: data?.receiver, receiver: data?.sender }
-            ]
-        })
-
-        if (!conversation) {
-            const createConversation = new ConversationModel({
-                sender: data?.sender,
-                receiver: data?.receiver
-            })
-            conversation = await createConversation.save()
-        }
-
         const { sender, receiver, text } = data;
 
         if (sender && receiver && text) {
