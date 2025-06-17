@@ -14,6 +14,7 @@ export default function Signup() {
     profilePic: "",
   });
   const [uploading, setUploading] = useState(false); // For upload state
+  const [signingUp, setSigningUp] = useState(false); 
   const navigate = useNavigate()
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
@@ -49,6 +50,7 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSigningUp(true);
     const URL =  "https://chatboot-05p9.onrender.com";
     try {
       const response = await axios.post(URL + "/signup", data);
@@ -66,6 +68,8 @@ export default function Signup() {
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Signup failed. Please try again.");
+    } finally {
+      setSigningUp(false);
     }
   };
 
@@ -158,9 +162,9 @@ export default function Signup() {
                 background: "linear-gradient(90deg, #fbc2eb 0%, #a18cd1 100%)",
               },
             }}
-            disabled={uploading}
+            disabled={uploading || signingUp} 
           >
-            Sign Up
+           {signingUp ? "Signing Up..." : "Sign Up"}
           </Button>
         </form>
         <div className="text-center text-sm sm:text-base">
