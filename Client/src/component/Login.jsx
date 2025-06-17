@@ -10,6 +10,7 @@ export default function Login() {
     username: "",
     password: "",
   });
+  const [login, setLogin] = useState(false);
   const navigate = useNavigate()
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
@@ -17,6 +18,7 @@ export default function Login() {
 
   const handleSubmit = async(e) => {
     e.preventDefault();
+     setLogin(true)
     const URL = "https://chatboot-05p9.onrender.com";
     try {
      const response = await axios.post(URL + "/login" ,data, { withCredentials: true })
@@ -33,6 +35,8 @@ export default function Login() {
         }
     } catch (error) {
      toast.error(error?.response?.data?.message || "Login failed. Please try again.");
+    } finally {
+      setLogin(false)
     }
   };
 
@@ -91,8 +95,9 @@ export default function Login() {
                 background: "linear-gradient(90deg, #fbc2eb 0%, #a18cd1 100%)",
               },
             }}
+             disabled={ login}
           >
-            Login
+            {login ? "Login ..." : "Log In"}
           </Button>
         </form>
         <div className="text-center text-sm sm:text-base">
