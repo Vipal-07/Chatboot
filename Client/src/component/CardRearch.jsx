@@ -10,6 +10,7 @@ export default function Chat() {
   const [data, setData] = useState({
     username: "",
   });
+  const [searchUser, setSearchUser ] = useState(false);
 
   const navigate = useNavigate()
 
@@ -28,6 +29,7 @@ const handleLogout = () => {
 
   const handleSend = async (e) => {
     e.preventDefault();
+    setSearchUser(true)
     // e.stopPropagation();
     if (!data.username.trim()) {
       alert("Please enter a username.");
@@ -48,6 +50,8 @@ const handleLogout = () => {
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to send message. Please try again.");
+    } finally {
+      setSearchUser(false)
     }
   };
 
@@ -102,8 +106,9 @@ const handleLogout = () => {
                 background: "linear-gradient(90deg, #fbc2eb 0%, #a18cd1 100%)",
               },
             }}
+             disabled={searchUser}
           >
-            Continue
+            {searchUser ? "Searching ..." : "Search"}
           </Button>
         </form>
 
