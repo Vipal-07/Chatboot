@@ -90,8 +90,8 @@ Chatboot is a real-time chat application built with a Node.js/Express backend an
       ```
 
 5. **Access the app:**
-    - Frontend: [http://localhost:5173](http://localhost:5173)
-    - Backend API: [http://localhost:5000](http://localhost:5000)
+    - Frontend: [https://chat-boot-9yl6.onrender.com](https://chat-boot-9yl6.onrender.com)
+    - Backend API: [https://chatboot-05p9.onrender.com](https://chatboot-05p9.onrender.com)
 
 ---
 
@@ -105,3 +105,5 @@ Chatboot is a real-time chat application built with a Node.js/Express backend an
 ## Contact
 
 For any questions or issues, please contact the
+
+Made with 🚩 by Vikas Maurya
