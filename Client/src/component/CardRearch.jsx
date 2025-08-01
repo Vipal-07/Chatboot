@@ -16,7 +16,7 @@ export default function CardRearch() {
 
   const handleLogout = async () => {
     try {
-      const URL = import.meta.env.VITE_BACKEND_URL;
+      const URL = "https://chatboot-05p9.onrender.com";
       await fetch(`${URL}/logout`, {
         method: "POST",
         credentials: "include", // Ensure cookies are included in the request
@@ -43,7 +43,7 @@ export default function CardRearch() {
     }
 
 
-    const URL = import.meta.env.VITE_BACKEND_URL;
+    const URL = "https://chatboot-05p9.onrender.com";
     try {
 
       const response = await axios.post(URL + "/card", data)
