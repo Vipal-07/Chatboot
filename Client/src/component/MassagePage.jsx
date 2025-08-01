@@ -29,7 +29,7 @@ const MassagePage = () => {
   // Function to handle logout
   const handleLogout = async () => {
     try {
-      const URL = import.meta.env.VITE_BACKEND_URL;
+      const URL = "https://chatboot-05p9.onrender.com";
       await fetch(`${URL}/logout`, {
         method: "POST",
         credentials: "include", // Ensure cookies are included in the request
@@ -61,7 +61,7 @@ const MassagePage = () => {
   }, []);
 
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const backendUrl = "https://chatboot-05p9.onrender.com";
     const token = getCookie('token'); // Retrieve token from cookie
     socketRef.current = io(backendUrl, {
       // auth: {
