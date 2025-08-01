@@ -25,7 +25,7 @@ app.use(cors({
 }));
 
 
-const redisUrl = "redis://localhost:6379" || process.env.REDIS_URL;
+const redisUrl =  process.env.REDIS_URL;
 const redisClient = redis.createClient({ url: redisUrl });
 
 
