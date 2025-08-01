@@ -51,7 +51,7 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSigningUp(true);
-    const URL = import.meta.env.VITE_BACKEND_URL;
+    const URL = "https://chatboot-05p9.onrender.com";
     try {
       const response = await axios.post(URL + "/signup", data);
       toast.success(response.data.message)
