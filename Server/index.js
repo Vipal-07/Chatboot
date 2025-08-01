@@ -10,9 +10,9 @@ const { Server } = require("socket.io");
 const cors = require('cors');
 const redis = require('redis');
 const cookiesParser = require('cookie-parser')
-const ConversationModel = require('./models/communicationSchema.js');
 const httpServer = createServer(app);
 const { UserDetailsByToken } = require('./middleWare.js');
+const frontendUrl = process.env.FRONTEND_URL || "https://chat-boot-9yl6.onrender.com";
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -20,12 +20,12 @@ app.use(cookiesParser())
 
 
 app.use(cors({
-    origin: 'https://chat-boot-9yl6.onrender.com',
+    origin: frontendUrl,
     credentials: true,
 }));
 
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const redisUrl = "redis://localhost:6379" || process.env.REDIS_URL;
 const redisClient = redis.createClient({ url: redisUrl });
 
 
@@ -49,14 +49,28 @@ main()
 
 const io = new Server(httpServer, {
     cors: {
-        origin: 'https://chat-boot-9yl6.onrender.com',
+        origin: frontendUrl,
         credentials: true,
     }
 });
 io.on('connection', async (socket) => {
     const token = socket.handshake.auth.token
 
+    // update code
+    if (!token) {
+        console.error('Token is missing');
+        socket.disconnect(); // Disconnect the socket if token is missing
+        return;
+    }
+
     const currentUser = await UserDetailsByToken(token)
+
+    // updated code
+    if (!currentUser || !currentUser._id) {
+        console.error('Invalid token or user not found');
+        socket.disconnect(); // Disconnect the socket if token is invalid
+        return;
+    }
     socket.join(currentUser?._id.toString());
 
     onlineUsers.set(currentUser._id.toString(), true);
@@ -80,31 +94,44 @@ io.on('connection', async (socket) => {
         const isOnline = onlineUsers.has(userId?.toString());
         socket.emit('user-online-status', { userId, isOnline });
     });
+    const offlineMessagesKey = `offline_msgs:${currentUser._id}`;
+    try {
+        const messages = await redisClient.lRange(offlineMessagesKey, 0, -1);
 
-    redisClient.lRange(`offline_msgs:${currentUser._id}`, 0, -1).then(async (messages) => {
         if (messages && messages.length > 0) {
             messages.forEach((msg) => {
                 socket.emit('receive-massage', JSON.parse(msg));
             });
             await redisClient.del(`offline_msgs:${currentUser._id}`);
         }
-    });
+    } catch (error) {
+        console.error("Error processing offline messages:", error);
+    }
 
     socket.on('send-massage', async (data) => {
-        const { sender, receiver, text } = data;
+        console.log(`Message sent from ${data.sender} to ${data.receiver}: ${data.text}`);
+        if (!data.sender || !data.receiver || !data.text) {
+            console.error("Invalid message data:", data);
+            return;
+        }
+        const { sender, receiver, text, timestamp } = data;
 
         if (sender && receiver && text) {
             if (onlineUsers.has(receiver)) {
                 io.to(receiver).emit('receive-massage', data);
+                io.to(sender).emit("message-received", { sender, timestamp }); // Notify sender
             } else {
                 await redisClient.rPush(`offline_msgs:${receiver}`, JSON.stringify(data));
             }
-            io.to(sender).emit('receive-massage', data);
+            // io.to(sender).emit('receive-massage', data);
+            // Notify sender that the message was delivered (even if offline)
+            io.to(sender).emit("message-delivered", { receiver, timestamp });
         }
 
     })
 
     socket.on('disconnect', () => {
+        console.log(`User disconnected: ${currentUser?._id}`);
         if (currentUser && currentUser._id) {
             onlineUsers.delete(currentUser._id.toString());
             io.emit('user-online-status', { userId: currentUser._id, isOnline: false });

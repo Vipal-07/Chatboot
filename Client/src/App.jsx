@@ -7,19 +7,21 @@ import CardRearch from './component/CardRearch'
 import MassagePage from './component/MassagePage'
 import ProtectedRoute from './component/ProtectedRoute';
 import toast, { Toaster } from 'react-hot-toast';
+import WeatherApp from './component/WeatherApp';
 
 
 function App() {
 
   return (
     <>
-    <Toaster />
-    <Router>
-      <Routes>
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
+      <Toaster />
+      <Router>
+        <Routes>
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+           <Route path="/weather" element={<WeatherApp />} />
 
-        <Route
+          <Route
             path="/card"
             element={
               <ProtectedRoute>
@@ -35,7 +37,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Login />} />
+          <Route path="*" element={<WeatherApp />} />
         </Routes>
       </Router>
     </>

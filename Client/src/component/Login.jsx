@@ -16,40 +16,50 @@ export default function Login() {
     setData({ ...data, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async(e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-     setLogin(true)
-    const URL = "https://chatboot-05p9.onrender.com";
+    setLogin(true)
+    const URL = import.meta.env.VITE_BACKEND_URL;
     try {
-     const response = await axios.post(URL + "/login" ,data, { withCredentials: true })
-       toast.success(response.data.message)
-       if(response.data.success){
-         localStorage.setItem('token',response?.data?.token)
-            setData({
-              username : "",
-              password : "",
-            })
+      const response = await axios.post(URL + "/login", data, { withCredentials: true })
+      console.log(response.data);
+      toast.success(response.data.message)
+      if (response.data.success) {
+        //  localStorage.setItem('token',response?.data?.token) // Remove this line
+        setData({
+          username: "",
+          password: "",
+        })
 
-            navigate('/card')
+        navigate('/card')
 
-        }
+      }
     } catch (error) {
-     toast.error(error?.response?.data?.message || "Login failed. Please try again.");
+      toast.error(error?.response?.data?.message || "Login failed. Please try again.");
     } finally {
       setLogin(false)
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden">
-     <div
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden"
+      style={{
+        backgroundImage: `
+    linear-gradient(135deg, rgba(135,206,250,0.6) 0%, rgba(240,248,255,0.5) 100%),
+    url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=1500&q=80')
+  `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      <div
         className="backdrop-blur-md bg-white/20 rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-sm md:max-w-md border border-white/30"
         style={{
           boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
           border: "1px solid rgba(255, 255, 255, 0.18)",
         }}
       >
-         <h2 className="text-2xl sm:text-3xl font-bold text-black mb-4 sm:mb-6 text-center drop-shadow">
+        <h2 className="text-2xl sm:text-3xl font-bold text-black mb-4 sm:mb-6 text-center drop-shadow">
           Login
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 mb-4">
@@ -82,7 +92,7 @@ export default function Login() {
             type="submit"
             variant="contained"
             fullWidth
-           sx={{
+            sx={{
               background: "linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%)",
               color: "#fff",
               fontWeight: "bold",
@@ -95,7 +105,7 @@ export default function Login() {
                 background: "linear-gradient(90deg, #fbc2eb 0%, #a18cd1 100%)",
               },
             }}
-             disabled={ login}
+            disabled={login}
           >
             {login ? "Login ..." : "Log In"}
           </Button>

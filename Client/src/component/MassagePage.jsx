@@ -26,15 +26,49 @@ const MassagePage = () => {
   const socketRef = useRef();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+  // Function to handle logout
+  const handleLogout = async () => {
+    try {
+      const URL = import.meta.env.VITE_BACKEND_URL;
+      await fetch(`${URL}/logout`, {
+        method: "POST",
+        credentials: "include", // Ensure cookies are included in the request
+      });
+      navigate("/weather"); // Navigate to the weather page after logout
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  // Function to get a cookie by name
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
   };
 
   useEffect(() => {
-    socketRef.current = io( "https://chatboot-05p9.onrender.com", {
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          console.log("Notification permission granted.");
+        } else {
+          console.log("Notification permission denied.");
+        }
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const token = getCookie('token'); // Retrieve token from cookie
+    socketRef.current = io(backendUrl, {
+      // auth: {
+      //   token: localStorage.getItem('token')
+      // },
       auth: {
-        token: localStorage.getItem('token')
+        token, // Send token to the server
       },
     });
     socketRef.current.on('receiver-user', (data) => {
@@ -61,17 +95,34 @@ const MassagePage = () => {
     }
   }, [params.userId, socketRef]);
 
+
   useEffect(() => {
     const handler = (data) => {
       setAllMassage((prev) => [...prev, data]);
+
+      // Trigger notification when a message is received
+      if (Notification.permission === "granted" && data.sender !== currentUser._id) {
+        const notification = new Notification("New Message", {
+          body: `${userDetail.name}: ${data.text}`,
+          icon: userDetail.profilePic || "https://randomuser.me/api/portraits/men/44.jpg",
+        });
+
+        // Handle notification click
+        notification.onclick = () => {
+          window.focus(); // Bring the browser window to focus
+        };
+      }
     };
-    socketRef.current.on('receive-massage', handler);
+
+    socketRef.current.on("receive-massage", handler);
+
     return () => {
-      socketRef.current.off('receive-massage', handler);
+      socketRef.current.off("receive-massage", handler);
     };
-  }, [])
+  }, [currentUser._id, userDetail.profilePic]);
 
   if (currentUser._id === params.userId) {
+    console.log("Self-chat detected. Redirecting...");
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
         <div className="bg-gray-900 text-white p-4 rounded-lg shadow-lg">
@@ -110,8 +161,10 @@ const MassagePage = () => {
           receiver: params?.userId,
           text: massage.text,
           timestamp: new Date().toISOString(),
+          status: "sent", // Initial status
         };
         socketRef.current.emit("send-massage", messageObj)
+        setAllMassage((prev) => [...prev, messageObj]); // Add message to local state
         setMassage({
           text: ""
         })
@@ -119,14 +172,48 @@ const MassagePage = () => {
     }
 
   }
+  // Update message status when received by the receiver
+  useEffect(() => {
+    const handler = (data) => {
+      setAllMassage((prev) =>
+        prev.map((msg) =>
+          msg.timestamp === data.timestamp && msg.sender === data.sender
+            ? { ...msg, status: "received" } // Update status to 'received'
+            : msg
+        )
+      );
+    };
+    socketRef.current.on("message-received", handler);
+    return () => {
+      socketRef.current.off("message-received", handler);
+    };
+  }, []);
 
   const handleChange = (e) => {
     setMassage({ ...massage, [e.target.name]: e.target.value });
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center bg-gray-900 justify-center  overflow-hidden">
-      <div className="w-full max-w-4xl h-[95vh] bg-gray-900 rounded-xl shadow-lg flex flex-col  overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden" 
+    style={{
+          backgroundImage: `
+    linear-gradient(135deg, rgba(135,206,250,0.6) 0%, rgba(240,248,255,0.5) 100%),
+    url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=1500&q=80')
+  `,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+    >
+      <div className="w-full  h-[100vh] rounded-xl shadow-lg flex flex-col  overflow-hidden"
+        style={{
+          backgroundImage: `
+    linear-gradient(135deg, rgba(135,206,250,0.6) 0%, rgba(240,248,255,0.5) 100%),
+    url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=1500&q=80')
+  `,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b">
           <div className="flex items-center gap-4">
             <img
@@ -190,8 +277,15 @@ const MassagePage = () => {
                     >
                       {msg.text}
                     </div>
-                    <div className="text-xs text-gray-400 mt-1 text-right">
+                    <div className="text-xs text-gray-400 mt-1 text-left flex items-center gap-1">
                       {time}
+                      {isCurrentUser && (
+                        <span
+                          className={`mr-2 ${msg.status === "received" ? "text-pink-400" : "text-red-700"}`}
+                        >
+                          {msg.status === "received" ? "✔✔" : "✔"}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {isCurrentUser && (

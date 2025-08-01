@@ -6,25 +6,30 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 
-export default function Chat() {
+export default function CardRearch() {
   const [data, setData] = useState({
     username: "",
   });
-  const [searchUser, setSearchUser ] = useState(false);
+  const [searchUser, setSearchUser] = useState(false);
 
   const navigate = useNavigate()
 
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  navigate("/login");
-};
+  const handleLogout = async () => {
+    try {
+      const URL = import.meta.env.VITE_BACKEND_URL;
+      await fetch(`${URL}/logout`, {
+        method: "POST",
+        credentials: "include", // Ensure cookies are included in the request
+      });
+      navigate("/weather"); // Navigate to the weather page after logout
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
   };
-
-
-  
 
 
   const handleSend = async (e) => {
@@ -38,10 +43,10 @@ const handleLogout = () => {
     }
 
 
-    const URL = "https://chatboot-05p9.onrender.com";
+    const URL = import.meta.env.VITE_BACKEND_URL;
     try {
 
-      const response = await axios.post(URL + "/card",data)
+      const response = await axios.post(URL + "/card", data)
       const id = response.data.data._id;
       toast.success(response.data.message)
       if (response.data.success) {
@@ -56,9 +61,18 @@ const handleLogout = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden relative">
-      
-       <div className="absolute top-4 right-4">
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden relative"
+      style={{
+        backgroundImage: `
+    linear-gradient(135deg, rgba(135,206,250,0.6) 0%, rgba(240,248,255,0.5) 100%),
+    url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=1500&q=80')
+  `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+
+      <div className="absolute top-4 right-4">
         <button
           onClick={handleLogout}
           className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full font-semibold transition"
@@ -67,7 +81,7 @@ const handleLogout = () => {
           Logout
         </button>
       </div>
-      
+
       <div
         className="backdrop-blur-md bg-white/20 rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-sm md:max-w-md border border-white/30"
         style={{
@@ -106,7 +120,7 @@ const handleLogout = () => {
                 background: "linear-gradient(90deg, #fbc2eb 0%, #a18cd1 100%)",
               },
             }}
-             disabled={searchUser}
+            disabled={searchUser}
           >
             {searchUser ? "Searching ..." : "Search"}
           </Button>
