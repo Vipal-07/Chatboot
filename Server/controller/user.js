@@ -48,7 +48,7 @@ module.exports.logoutFunction = async (req, res) => {
     try {
         const cookieOptions = {
             httpOnly: true,
-            secure: false,
+            secure: true,
             sameSite: 'None',
             maxAge: 0 // Set maxAge to 0 to delete the cookie
         }
@@ -91,7 +91,7 @@ module.exports.loginFunction = async (req, res) => {
 
         const cookieOptions = {
             httpOnly: true,
-            secure: false,
+            secure: true,
             sameSite: 'None',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
         }
