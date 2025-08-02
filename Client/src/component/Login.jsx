@@ -31,7 +31,7 @@ export default function Login() {
           password: "",
         })
 
-        navigate('/card')
+        navigate('/weather')
 
       }
     } catch (error) {
