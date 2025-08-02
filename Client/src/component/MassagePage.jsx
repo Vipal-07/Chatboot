@@ -63,6 +63,7 @@ const MassagePage = () => {
   useEffect(() => {
     const backendUrl = "https://chatboot-05p9.onrender.com";
     const token = getCookie('token'); // Retrieve token from cookie
+    console.log("Token from cookie:", token);
     socketRef.current = io(backendUrl, {
       // auth: {
       //   token: localStorage.getItem('token')
