@@ -47,7 +47,7 @@ module.exports.signUpFunction = async (req, res) => {
 module.exports.logoutFunction = async (req, res) => {
     try {
         const cookieOptions = {
-            http: true,
+            httpOnly: true,
             secure: true,
             sameSite: 'None',
             maxAge: 0 // Set maxAge to 0 to delete the cookie
@@ -90,7 +90,7 @@ module.exports.loginFunction = async (req, res) => {
         const token = await jwt.sign(tokenData, process.env.TOKEN_SCRETE, { expiresIn: '7d' })
 
         const cookieOptions = {
-            http: true,
+            httpOnly: true,
             secure: true,
             sameSite: 'None',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
