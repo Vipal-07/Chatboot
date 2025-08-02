@@ -16,7 +16,15 @@ export default function CardRearch() {
 
   const handleLogout = async () => {
     try {
+<<<<<<< HEAD
       localStorage.removeItem("token");
+=======
+      const URL = "https://chatboot-05p9.onrender.com";
+      await fetch(`${URL}/logout`, {
+        method: "POST",
+        credentials: "include", // Ensure cookies are included in the request
+      });
+>>>>>>> a0ccf51a1c768f35937da4611093c027a7f7a9fa
       navigate("/weather"); // Navigate to the weather page after logout
     } catch (error) {
       console.error("Logout failed:", error);
@@ -39,7 +47,7 @@ export default function CardRearch() {
     }
 
 
-    const URL = import.meta.env.VITE_BACKEND_URL;
+    const URL = "https://chatboot-05p9.onrender.com";
     try {
 
       const response = await axios.post(URL + "/card", data)

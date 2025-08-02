@@ -24,17 +24,17 @@ function App() {
           <Route
             path="/card"
             element={
-              <ProtectedRoute>
+              
                 <CardRearch />
-              </ProtectedRoute>
+              
             }
           />
           <Route
             path="/card/:userId"
             element={
-              <ProtectedRoute>
+              
                 <MassagePage />
-              </ProtectedRoute>
+      
             }
           />
           <Route path="*" element={<WeatherApp />} />

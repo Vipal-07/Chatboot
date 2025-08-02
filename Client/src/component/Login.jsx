@@ -19,7 +19,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLogin(true)
-    const URL = import.meta.env.VITE_BACKEND_URL;
+    const URL = "https://chatboot-05p9.onrender.com";
     try {
       const response = await axios.post(URL + "/login", data, { withCredentials: true });
       console.log(response.data);

@@ -20,7 +20,7 @@ app.use(cookiesParser())
 
 
 app.use(cors({
-    origin: frontendUrl,
+    origin: "https://chat-boot-9yl6.onrender.com",
     credentials: true,
 }));
 
@@ -49,7 +49,7 @@ main()
 
 const io = new Server(httpServer, {
     cors: {
-        origin: frontendUrl,
+        origin: "https://chat-boot-9yl6.onrender.com",
         credentials: true,
     }
 });
