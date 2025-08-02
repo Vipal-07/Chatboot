@@ -29,15 +29,7 @@ const MassagePage = () => {
   // Function to handle logout
   const handleLogout = async () => {
     try {
-<<<<<<< HEAD
      localStorage.removeItem("token");
-=======
-      const URL = "https://chatboot-05p9.onrender.com";
-      await fetch(`${URL}/logout`, {
-        method: "POST",
-        credentials: "include", // Ensure cookies are included in the request
-      });
->>>>>>> a0ccf51a1c768f35937da4611093c027a7f7a9fa
       navigate("/weather"); // Navigate to the weather page after logout
     } catch (error) {
       console.error("Logout failed:", error);
@@ -65,15 +57,7 @@ const MassagePage = () => {
   }, []);
 
   useEffect(() => {
-<<<<<<< HEAD
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    // const token = getCookie('token'); // Retrieve token from cookie
-    // console.log("Token from cookie:", token);
-=======
     const backendUrl = "https://chatboot-05p9.onrender.com";
-    const token = getCookie('token'); // Retrieve token from cookie
-    console.log("Token from cookie:", token);
->>>>>>> a0ccf51a1c768f35937da4611093c027a7f7a9fa
     socketRef.current = io(backendUrl, {
       auth: {
         token: localStorage.getItem('token')
