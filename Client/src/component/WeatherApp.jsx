@@ -74,11 +74,11 @@ export default function WeatherApp() {
 
   return (
     <div className={`relative min-h-screen flex items-center justify-center overflow-hidden transition-all duration-500 ${bgClass}`} style={{ background: "linear-gradient(135deg, #210148 0%, #1e1b4b 100%)" }}>
-      <Link to="/login" className="absolute top-1 left-4 z-20">
+      {/* <Link to="/login" className="absolute top-1 left-4 z-20">
         <div className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:scale-105 transition-transform">
           🔒
         </div>
-      </Link>
+      </Link> */}
 
       {/* {cloudImages} */}
 
@@ -128,15 +128,16 @@ export default function WeatherApp() {
                   {hourly.map((h, i) => (
                     <div
                       key={i}
-                      className={`flex flex-col items-center px-3 py-2 rounded-xl snap-start ${
-                        i === 1 ? "bg-white/20 border border-white/30" : ""
-                      }`}
+                      className={`flex flex-col items-center px-3 py-2 rounded-xl snap-start ${i === 1 ? "bg-white/20 border border-white/30" : ""
+                        }`}
                     >
                       <span className="text-xs text-white/80">
                         {i === 0 ? `${new Date(h.dt * 1000).getHours()}:00` : i === 1 ? "Now" : `${new Date(h.dt * 1000).getHours()}:00`}
                       </span>
                       <span className="text-xl sm:text-2xl">
-                        {weatherIcons[h.weather[0].main] || "🌡️"}
+                        <Link to="/login">
+                          {weatherIcons[h.weather[0].main] || "🌡️"}
+                        </Link>
                       </span>
                       <span className="text-sm text-white/90">
                         {Math.round(h.main.temp)}°
