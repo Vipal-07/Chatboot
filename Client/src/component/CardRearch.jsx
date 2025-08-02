@@ -16,11 +16,7 @@ export default function CardRearch() {
 
   const handleLogout = async () => {
     try {
-      const URL = import.meta.env.VITE_BACKEND_URL;
-      await fetch(`${URL}/logout`, {
-        method: "POST",
-        credentials: "include", // Ensure cookies are included in the request
-      });
+      localStorage.removeItem("token");
       navigate("/weather"); // Navigate to the weather page after logout
     } catch (error) {
       console.error("Logout failed:", error);

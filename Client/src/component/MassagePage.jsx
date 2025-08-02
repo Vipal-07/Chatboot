@@ -29,11 +29,7 @@ const MassagePage = () => {
   // Function to handle logout
   const handleLogout = async () => {
     try {
-      const URL = import.meta.env.VITE_BACKEND_URL;
-      await fetch(`${URL}/logout`, {
-        method: "POST",
-        credentials: "include", // Ensure cookies are included in the request
-      });
+     localStorage.removeItem("token");
       navigate("/weather"); // Navigate to the weather page after logout
     } catch (error) {
       console.error("Logout failed:", error);
@@ -41,12 +37,12 @@ const MassagePage = () => {
   };
 
   // Function to get a cookie by name
-  const getCookie = (name) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return null;
-  };
+  // const getCookie = (name) => {
+  //   const value = `; ${document.cookie}`;
+  //   const parts = value.split(`; ${name}=`);
+  //   if (parts.length === 2) return parts.pop().split(';').shift();
+  //   return null;
+  // };
 
   useEffect(() => {
     if (Notification.permission !== "granted") {
@@ -62,14 +58,15 @@ const MassagePage = () => {
 
   useEffect(() => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    const token = getCookie('token'); // Retrieve token from cookie
+    // const token = getCookie('token'); // Retrieve token from cookie
+    // console.log("Token from cookie:", token);
     socketRef.current = io(backendUrl, {
-      // auth: {
-      //   token: localStorage.getItem('token')
-      // },
       auth: {
-        token, // Send token to the server
+        token: localStorage.getItem('token')
       },
+      // auth: {
+      //   token, // Send token to the server
+      // },
     });
     socketRef.current.on('receiver-user', (data) => {
       setUserDetail(data);
@@ -277,7 +274,7 @@ const MassagePage = () => {
                     >
                       {msg.text}
                     </div>
-                    <div className="text-xs text-gray-400 mt-1 text-left flex items-center gap-1">
+                    <div className="text-xs text-gray-950 mt-1 text-left flex items-center gap-1">
                       {time}
                       {isCurrentUser && (
                         <span

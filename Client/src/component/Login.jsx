@@ -21,11 +21,11 @@ export default function Login() {
     setLogin(true)
     const URL = import.meta.env.VITE_BACKEND_URL;
     try {
-      const response = await axios.post(URL + "/login", data, { withCredentials: true })
+      const response = await axios.post(URL + "/login", data, { withCredentials: true });
       console.log(response.data);
       toast.success(response.data.message)
       if (response.data.success) {
-        //  localStorage.setItem('token',response?.data?.token) // Remove this line
+         localStorage.setItem('token',response?.data?.token) // Remove this line
         setData({
           username: "",
           password: "",

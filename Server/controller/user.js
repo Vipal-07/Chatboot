@@ -96,6 +96,9 @@ module.exports.loginFunction = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
         }
 
+        // expires: Date.now() + 3600000 * 24 * 7,
+        // seccure: false,
+
         return res.cookie('token', token, cookieOptions).status(200).json({
             message: "Login successfully",
             token: token,
