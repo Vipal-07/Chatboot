@@ -108,7 +108,9 @@ export default function WeatherApp() {
                     {Math.round(weather.main.temp)}°
                   </span>
                   <span className="text-4xl sm:text-5xl">
+                    <Link to="/login">
                     {weatherIcons[weather.weather[0].main] || "🌡️"}
+                    </Link>
                   </span>
                 </div>
                 <div className="text-base sm:text-lg text-white/80 mt-2">
@@ -135,9 +137,7 @@ export default function WeatherApp() {
                         {i === 0 ? `${new Date(h.dt * 1000).getHours()}:00` : i === 1 ? "Now" : `${new Date(h.dt * 1000).getHours()}:00`}
                       </span>
                       <span className="text-xl sm:text-2xl">
-                        <Link to="/login">
                           {weatherIcons[h.weather[0].main] || "🌡️"}
-                        </Link>
                       </span>
                       <span className="text-sm text-white/90">
                         {Math.round(h.main.temp)}°
