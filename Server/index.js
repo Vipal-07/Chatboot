@@ -12,6 +12,7 @@ const redis = require('redis');
 const cookiesParser = require('cookie-parser')
 const httpServer = createServer(app);
 const { UserDetailsByToken } = require('./middleWare.js');
+const frontendUrl = process.env.FRONTEND_URL;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

@@ -165,7 +165,6 @@ module.exports.credential = async (req, res) => {
     try {
         // Generate TURN/STUN credentials
         const token = await client.tokens.create();
-
         res.json({ iceServers: token.iceServers });
     } catch (err) {
         console.error("Error fetching ICE servers:", err);
