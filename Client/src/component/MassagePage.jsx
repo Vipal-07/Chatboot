@@ -65,15 +65,15 @@ const MassagePage = () => {
       }
     };
     // Track handler for remote audio
-    peerConnectionRef.current.ontrack = (event) => {
-      let inboundStream = remoteStream || new MediaStream();
-      inboundStream.addTrack(event.track);
-      setRemoteStream(inboundStream);
-      // Attach to audio element
-      const audioElement = document.getElementById("remote-audio");
-      if (audioElement) {
-        audioElement.srcObject = inboundStream;
-      }
+     peerConnectionRef.current.ontrack = (event) => {
+      setRemoteStream(prev => {
+        const inboundStream = prev ? prev : new MediaStream();
+        inboundStream.addTrack(event.track);
+        // attach to audio element
+        const audioElement = document.getElementById("remote-audio");
+        if (audioElement) audioElement.srcObject = inboundStream;
+        return inboundStream;
+      });
     };
   };
 
@@ -157,30 +157,7 @@ const MassagePage = () => {
     fetchICE();
 
 
-    socketRef.current.on("incoming-call", async ({ senderId, offer }) => {
-      const acceptCall = window.confirm("Incoming call. Do you want to accept?");
-      if (acceptCall) {
-        // Create a peer connection
-        createPeerConnection();
-
-        // Set the remote description
-        await setRemoteDescriptionAndAddCandidates(offer);
-
-        // Create an answer
-        const answer = await peerConnectionRef.current.createAnswer();
-        await peerConnectionRef.current.setLocalDescription(answer);
-
-        // Send the answer back to the caller
-        socketRef.current.emit("answer-call", {
-          senderId,
-          answer,
-        });
-
-        // Navigate to the VoiceCallUI
-        // navigate("/call");
-      }
-    });
-
+    
     socketRef.current.on("call-answered", async ({ answer }) => {
       await setRemoteDescriptionAndAddCandidates(answer);
       // setCallConnected(true); // <-- ADD THIS ON CALLER SIDE
@@ -215,6 +192,10 @@ const MassagePage = () => {
 
 
   const handleCallUser = async () => {
+    if (!iceServers.length) {
+    alert("ICE servers not ready. Please wait and try again.");
+    return;
+  }
     setIsCalling(true);
     // setInCall(true);
     // Create a peer connection
@@ -227,8 +208,12 @@ const MassagePage = () => {
       peerConnectionRef.current.addTrack(track, stream);
     });
     // Attach to local audio element (for mute/unmute)
-    const localAudio = document.getElementById("local-audio");
-    if (localAudio) localAudio.srcObject = stream;
+ const localAudio = document.getElementById("local-audio");
+     if (localAudio) {
+      localAudio.srcObject = stream;
+      // try explicit play (some mobile browsers require user gesture, but call is a gesture)
+      localAudio.play().catch(() => {});
+    }
 
     // Create an offer
     const offer = await peerConnectionRef.current.createOffer();
@@ -244,6 +229,9 @@ const MassagePage = () => {
     // navigate("/call");
   };
 
+   const pendingCandidatesRef = useRef([]);
+  useEffect(() => { pendingCandidatesRef.current = pendingCandidates; }, [pendingCandidates]);
+  
   const setRemoteDescriptionAndAddCandidates = async (desc) => {
     if (peerConnectionRef.current) {
       await peerConnectionRef.current.setRemoteDescription(desc);
@@ -251,6 +239,7 @@ const MassagePage = () => {
       pendingCandidates.forEach((candidate) => {
         peerConnectionRef.current.addIceCandidate(candidate);
       });
+            pendingCandidatesRef.current = [];
       setPendingCandidates([]); // Clear buffer
     }
   };
@@ -327,6 +316,10 @@ const MassagePage = () => {
   ]);
 
   const handleAcceptCall = async () => {
+     if (!iceServers.length) {
+    alert("ICE servers not ready. Please wait and try again.");
+    return;
+  }
     setInCall(true);
     setIncomingCall(null);
     createPeerConnection();
@@ -705,7 +698,7 @@ const MassagePage = () => {
             onClick={handleCallUser}
             className="ml-2 bg-green-500 text-white p-3 rounded-full hover:bg-green-600 transition"
             title="Call"
-            disabled={inCall}
+           disabled={inCall || iceServers.length === 0}
           >
             <FaPhone size={19} />
           </button>
