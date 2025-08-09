@@ -385,6 +385,7 @@ const MassagePage = () => {
     if (socketRef.current && userDetail._id) {
       socketRef.current.emit("end-call", { receiverId: userDetail._id });
     }
+    setIncomingCall(null);
   };
 
   useEffect(() => {
@@ -394,6 +395,7 @@ const MassagePage = () => {
       setCallConnected(false);
       setCallDuration(0);
       setIsCalling(false);
+      setIncomingCall(null);
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
@@ -671,7 +673,7 @@ const MassagePage = () => {
                   <FaPhoneSlash size={24} />
                 </button>
               </div>
-              <audio id="local-audio" autoPlay muted />
+              <audio id="local-audio" autoPlay />
               <audio id="remote-audio" autoPlay />
             </div>
           </div>
