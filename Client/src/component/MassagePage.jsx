@@ -114,6 +114,15 @@ const MassagePage = () => {
       if (["failed", "disconnected", "closed"].includes(peerConnectionRef.current.connectionState)) {
         console.log("Connection state:", peerConnectionRef.current.connectionState);
       }
+     peerConnectionRef.current.ontrack = (event) => {
+      setRemoteStream(prev => {
+        const inboundStream = prev ? prev : new MediaStream();
+        inboundStream.addTrack(event.track);
+        // attach to audio element
+        const audioElement = document.getElementById("remote-audio");
+        if (audioElement) audioElement.srcObject = inboundStream;
+        return inboundStream;
+      });
     };
     return peerConnectionRef.current;
   };
@@ -166,6 +175,46 @@ const MassagePage = () => {
     }
   }, [params.userId, socketRef]);
 
+
+
+  useEffect(() => {
+    if (!currentUser.username) return;
+    const fetchICE = async () => {
+      try {
+        const response = await axios.get(`${BACKEND_URL}/credential`);
+        setIceServers(response.data.iceServers);
+      }
+      catch (error) {
+        console.error("Error fetching ICE servers:", error);
+      }
+    };
+    fetchICE();
+
+
+    
+    socketRef.current.on("call-answered", async ({ answer }) => {
+      await setRemoteDescriptionAndAddCandidates(answer);
+      // setCallConnected(true); // <-- ADD THIS ON CALLER SIDE
+      // Navigate to the VoiceCallUI
+    });
+
+    socketRef.current.on("ice-candidate", ({ candidate }) => {
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.addIceCandidate(candidate);
+      }
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+    };
+  }, [currentUser.username]);
+  useEffect(() => {
+    let timer;
+    if (callConnected) {
+      timer = setInterval(() => setCallDuration((prev) => prev + 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [callConnected]);
   const formatDuration = (duration) => {
     const minutes = Math.floor(duration / 60);
     const seconds = duration % 60;
@@ -202,6 +251,10 @@ const MassagePage = () => {
       alert("ICE servers not ready. Please wait and try again.");
       return;
     }
+    if (!iceServers.length) {
+    alert("ICE servers not ready. Please wait and try again.");
+    return;
+  }
     setIsCalling(true);
 
     const pc = createPeerConnection();
@@ -224,6 +277,20 @@ const MassagePage = () => {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    stream.getTracks().forEach((track) => {
+      peerConnectionRef.current.addTrack(track, stream);
+    });
+    // Attach to local audio element (for mute/unmute)
+ const localAudio = document.getElementById("local-audio");
+     if (localAudio) {
+      localAudio.srcObject = stream;
+      // try explicit play (some mobile browsers require user gesture, but call is a gesture)
+      localAudio.play().catch(() => {});
+    }
+
+    // Create an offer
+    const offer = await peerConnectionRef.current.createOffer();
+    await peerConnectionRef.current.setLocalDescription(offer);
 
     socketRef.current.emit("call-user", {
       receiverId: userDetail._id,
@@ -235,6 +302,10 @@ const MassagePage = () => {
   const pendingCandidatesRef = useRef([]);
   useEffect(() => { pendingCandidatesRef.current = pendingCandidates; }, [pendingCandidates]);
 
+
+   const pendingCandidatesRef = useRef([]);
+  useEffect(() => { pendingCandidatesRef.current = pendingCandidates; }, [pendingCandidates]);
+  
   const setRemoteDescriptionAndAddCandidates = async (desc) => {
     if (!peerConnectionRef.current) return;
     await peerConnectionRef.current.setRemoteDescription(desc);
@@ -249,11 +320,97 @@ const MassagePage = () => {
   };
 
   // Accept call
+    if (peerConnectionRef.current) {
+      await peerConnectionRef.current.setRemoteDescription(desc);
+      // Add all pending candidates
+      pendingCandidates.forEach((candidate) => {
+        peerConnectionRef.current.addIceCandidate(candidate);
+      });
+            pendingCandidatesRef.current = [];
+      setPendingCandidates([]); // Clear buffer
+    }
+  };
+
+  // Accept incoming call
+  useEffect(() => {
+    if (!socketRef.current) return;
+    socketRef.current.on("incoming-call", async ({ senderId, offer }) => {
+      setIncomingCall({ senderId, offer });
+      // const acceptCall = window.confirm("Incoming call. Do you want to accept?");
+      // if (acceptCall) {
+      //   setInCall(true);
+      //   createPeerConnection();
+
+      //   // Get local audio
+      //   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      //   setLocalStream(stream);
+      //   stream.getTracks().forEach((track) => {
+      //     peerConnectionRef.current.addTrack(track, stream);
+      //   });
+      //   const localAudio = document.getElementById("local-audio");
+      //   if (localAudio) localAudio.srcObject = stream;
+
+      //   await peerConnectionRef.current.setRemoteDescription(offer);
+      //   const answer = await peerConnectionRef.current.createAnswer();
+      //   await peerConnectionRef.current.setLocalDescription(answer);
+
+      //   socketRef.current.emit("answer-call", {
+      //     senderId,
+      //     answer,
+      //   });
+      // }
+    });
+
+    socketRef.current.on("call-answered", async ({ answer }) => {
+      await setRemoteDescriptionAndAddCandidates(answer);
+      setCallConnected(true);
+    });
+
+    socketRef.current.on("ice-candidate", ({ candidate }) => {
+      if (peerConnectionRef.current && candidate) {
+        if (
+          peerConnectionRef.current.remoteDescription &&
+          peerConnectionRef.current.remoteDescription.type
+        ) {
+          peerConnectionRef.current.addIceCandidate(candidate);
+        } else {
+          // Buffer the candidate until remote description is set
+          setPendingCandidates((prev) => [...prev, candidate]);
+        }
+      }
+    });
+
+    return () => {
+      socketRef.current.off("incoming-call");
+      socketRef.current.off("call-answered");
+      socketRef.current.off("ice-candidate");
+    };
+  }, [iceServers, userDetail._id, remoteStream]);
+
+  useEffect(() => {
+    if (
+      peerConnectionRef.current &&
+      peerConnectionRef.current.localDescription &&
+      peerConnectionRef.current.remoteDescription
+    ) {
+      setCallConnected(true);
+      setInCall(true); // <-- MOVE HERE
+      setIsCalling(false);  // Hide "Ringing..." when call is connected
+    }
+  }, [
+    peerConnectionRef.current?.localDescription,
+    peerConnectionRef.current?.remoteDescription,
+  ]);
+
   const handleAcceptCall = async () => {
     if (!iceServers.length) {
       alert("ICE servers not ready.");
       return;
     }
+     if (!iceServers.length) {
+    alert("ICE servers not ready. Please wait and try again.");
+    return;
+  }
     setInCall(true);
     setIncomingCall(null);
     const pc = createPeerConnection();
@@ -331,6 +488,11 @@ const MassagePage = () => {
   const handleEndCall = () => {
     socketRef.current.emit("end-call", { receiverId: userDetail._id });
     cleanupCallState();
+    // Emit end-call to the other user
+    if (socketRef.current && userDetail._id) {
+      socketRef.current.emit("end-call", { receiverId: userDetail._id });
+    }
+    setIncomingCall(null);
   };
 
   // Signaling listeners
@@ -371,6 +533,14 @@ const MassagePage = () => {
           .catch(err => console.warn("Add candidate error", err));
       } else {
         setPendingCandidates(prev => [...prev, candidate]);
+      setIncomingCall(null);
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+        setLocalStream(null);
       }
     };
     socketRef.current.on("ice-candidate", onCandidate);
@@ -601,6 +771,8 @@ const MassagePage = () => {
               </div>
               <audio id="local-audio" autoPlay muted playsInline style={{ display: "none" }} />
               <audio id="remote-audio" autoPlay playsInline style={{ display: "none" }} />
+              <audio id="local-audio" autoPlay />
+              <audio id="remote-audio" autoPlay />
             </div>
           </div>
         )}
@@ -649,6 +821,7 @@ const MassagePage = () => {
             className="ml-2 bg-green-500 text-white p-3 rounded-full hover:bg-green-600 transition"
             title="Call"
             disabled={inCall || isCalling || iceServers.length === 0}
+           disabled={inCall || iceServers.length === 0}
           >
             <FaPhone size={19} />
           </button>
