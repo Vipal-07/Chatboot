@@ -18,17 +18,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookiesParser())
 
-
 app.use(cors({
     origin: frontendUrl,
     credentials: true,
 }));
 
-
-
 const redisUrl = process.env.REDIS_URL;
 const redisClient = redis.createClient({ url: redisUrl });
-
 
 redisClient.connect().then(() => {
     console.log('Connected to Redis');
@@ -94,11 +90,10 @@ io.on('connection', async (socket) => {
 
     // Add this inside your io.on('connection', ...) block
     socket.on('end-call', ({ receiverId }) => {
-        io.to(receiverId).emit('call-ended');
+        io.to(receiverId).emit('call-ended', { by: socket.userId || currentUser._id });
+        socket.emit('call-ended', { by: socket.userId || currentUser._id }); // local echo safeguard
     });
-
     // end
-
     onlineUsers.set(currentUser._id.toString(), true);
     io.emit('user-online-status', { userId: currentUser._id, isOnline: true });
 
@@ -136,21 +131,19 @@ io.on('connection', async (socket) => {
 
     socket.on('send-massage', async (data) => {
         // console.log(`Message sent from ${data.sender} to ${data.receiver}: ${data.text}`);
-        if (!data.sender || !data.receiver || (!data.text && !data.imageUrl && !data.videoUrl)) {
+        if (!data.sender || !data.receiver || (!data.text && !data.imageUrl)) {
             console.error("Invalid message data:", data);
             return;
         }
-        const { sender, receiver, text, imageUrl, videoUrl, timestamp } = data;
+        const { sender, receiver, text, imageUrl, timestamp } = data;
 
-        if (sender && receiver && (text || imageUrl || videoUrl)) {
+        if (sender && receiver && (text || imageUrl)) {
             if (onlineUsers.has(receiver)) {
                 io.to(receiver).emit('receive-massage', data);
                 io.to(sender).emit("message-received", { sender, timestamp }); // Notify sender
             } else {
                 await redisClient.rPush(`offline_msgs:${receiver}`, JSON.stringify({ sender, receiver, text, timestamp }));
             }
-            // io.to(sender).emit('receive-massage', data);
-            // Notify sender that the message was delivered (even if offline)
             io.to(sender).emit("message-delivered", { receiver, timestamp });
         }
 

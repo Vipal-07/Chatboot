@@ -163,9 +163,13 @@ const client = twilio(process.env.ACCOUNT_SID, process.env.AUTH_TOKEN);
 
 module.exports.credential = async (req, res) => {
     try {
-        // Generate TURN/STUN credentials
         const token = await client.tokens.create();
-        res.json({ iceServers: token.iceServers });
+        const iceServers = (token.iceServers || []).map(s => ({
+            urls: s.urls || s.url,
+            username: s.username,
+            credential: s.credential
+        }));
+        return res.json({ iceServers });
     } catch (err) {
         console.error("Error fetching ICE servers:", err);
         res.status(500).json({ error: "Failed to get ICE servers" });

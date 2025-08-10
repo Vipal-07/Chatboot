@@ -29,7 +29,6 @@ const MassagePage = () => {
   const [massage, setMassage] = useState({
     text: "",
     imageUrl: "",
-    videoUrl: ""
   })
   const [allMassage, setAllMassage] = useState([]);
   const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false);
@@ -53,7 +52,35 @@ const MassagePage = () => {
 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
+  useEffect(() => {
+    const backendUrl = BACKEND_URL;
+    socketRef.current = io(backendUrl, {
+      auth: {
+        token: localStorage.getItem('token')
+      },
+    });
+  }, [BACKEND_URL]);
+
+  useEffect(() => {
+    if (!currentUser.username) return;
+    const fetchICE = async () => {
+      try {
+        const response = await axios.get(`${BACKEND_URL}/credential?identity=${currentUser.username}`);
+        setIceServers(response.data.iceServers);
+      }
+      catch (error) {
+        console.error("Error fetching ICE servers:", error);
+      }
+    };
+    fetchICE();
+  }, [currentUser.username]);
+
   const createPeerConnection = () => {
+    if (peerConnectionRef.current) return peerConnectionRef.current; // reuse
+    if (!iceServers.length) {
+      console.warn("ICE servers not ready");
+      return null;
+    }
     peerConnectionRef.current = new RTCPeerConnection({ iceServers });
     // Handle ICE candidates
     peerConnectionRef.current.onicecandidate = (event) => {
@@ -66,15 +93,29 @@ const MassagePage = () => {
     };
     // Track handler for remote audio
     peerConnectionRef.current.ontrack = (event) => {
-      let inboundStream = remoteStream || new MediaStream();
-      inboundStream.addTrack(event.track);
-      setRemoteStream(inboundStream);
-      // Attach to audio element
-      const audioElement = document.getElementById("remote-audio");
-      if (audioElement) {
-        audioElement.srcObject = inboundStream;
+      console.log("[RTC] Remote track:", event.track.id, event.track.kind);
+      setRemoteStream(prev => {
+        const inbound = prev || new MediaStream();
+        // Avoid duplicate same id
+        if (!inbound.getTracks().find(t => t.id === event.track.id)) {
+          inbound.addTrack(event.track);
+        }
+        // Attempt immediate attachment (in case audio element already exists)
+        const remoteEl = document.getElementById("remote-audio");
+        if (remoteEl && remoteEl.srcObject !== inbound) {
+          remoteEl.srcObject = inbound;
+          remoteEl.play().catch(() => { });
+        }
+        return inbound;
+      });
+    };
+
+    peerConnectionRef.current.onconnectionstatechange = () => {
+      if (["failed", "disconnected", "closed"].includes(peerConnectionRef.current.connectionState)) {
+        console.log("Connection state:", peerConnectionRef.current.connectionState);
       }
     };
+    return peerConnectionRef.current;
   };
 
   // Function to handle logout
@@ -86,14 +127,6 @@ const MassagePage = () => {
       console.error("Logout failed:", error);
     }
   };
-
-  // Function to get a cookie by name
-  // const getCookie = (name) => {
-  //   const value = `; ${document.cookie}`;
-  //   const parts = value.split(`; ${name}=`);
-  //   if (parts.length === 2) return parts.pop().split(';').shift();
-  //   return null;
-  // };
 
   useEffect(() => {
     if (Notification.permission !== "granted") {
@@ -108,15 +141,7 @@ const MassagePage = () => {
   }, []);
 
   useEffect(() => {
-    const backendUrl = BACKEND_URL;
-    socketRef.current = io(backendUrl, {
-      auth: {
-        token: localStorage.getItem('token')
-      },
-      // auth: {
-      //   token, // Send token to the server
-      // },
-    });
+    if (!socketRef.current) return;
     socketRef.current.on('receiver-user', (data) => {
       setUserDetail(data);
     });
@@ -141,69 +166,6 @@ const MassagePage = () => {
     }
   }, [params.userId, socketRef]);
 
-
-
-  useEffect(() => {
-    if (!currentUser.username) return;
-    const fetchICE = async () => {
-      try {
-        const response = await axios.get(`${BACKEND_URL}/credential`);
-        setIceServers(response.data.iceServers);
-      }
-      catch (error) {
-        console.error("Error fetching ICE servers:", error);
-      }
-    };
-    fetchICE();
-
-
-    socketRef.current.on("incoming-call", async ({ senderId, offer }) => {
-      const acceptCall = window.confirm("Incoming call. Do you want to accept?");
-      if (acceptCall) {
-        // Create a peer connection
-        createPeerConnection();
-
-        // Set the remote description
-        await setRemoteDescriptionAndAddCandidates(offer);
-
-        // Create an answer
-        const answer = await peerConnectionRef.current.createAnswer();
-        await peerConnectionRef.current.setLocalDescription(answer);
-
-        // Send the answer back to the caller
-        socketRef.current.emit("answer-call", {
-          senderId,
-          answer,
-        });
-
-        // Navigate to the VoiceCallUI
-        // navigate("/call");
-      }
-    });
-
-    socketRef.current.on("call-answered", async ({ answer }) => {
-      await setRemoteDescriptionAndAddCandidates(answer);
-      // setCallConnected(true); // <-- ADD THIS ON CALLER SIDE
-      // Navigate to the VoiceCallUI
-    });
-
-    socketRef.current.on("ice-candidate", ({ candidate }) => {
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.addIceCandidate(candidate);
-      }
-    });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, [currentUser.username]);
-  useEffect(() => {
-    let timer;
-    if (callConnected) {
-      timer = setInterval(() => setCallDuration((prev) => prev + 1), 1000);
-    }
-    return () => clearInterval(timer);
-  }, [callConnected]);
   const formatDuration = (duration) => {
     const minutes = Math.floor(duration / 60);
     const seconds = duration % 60;
@@ -212,145 +174,124 @@ const MassagePage = () => {
       .padStart(2, "0")}`;
   };
 
+  // Re-attach streams when they or UI state change (fix race where element mounts after track)
+  useEffect(() => {
+    if (remoteStream && inCall) {
+      const remoteEl = document.getElementById("remote-audio");
+      if (remoteEl && remoteEl.srcObject !== remoteStream) {
+        remoteEl.srcObject = remoteStream;
+        remoteEl.play().catch(() => { });
+        console.log("[RTC] Remote stream re-attached after UI mount");
+      }
+    }
+  }, [remoteStream, inCall]);
 
+  useEffect(() => {
+    if (localStream) {
+      const localEl = document.getElementById("local-audio");
+      if (localEl && localEl.srcObject !== localStream) {
+        localEl.srcObject = localStream;
+        console.log("[RTC] Local stream attached/re-attached");
+      }
+    }
+  }, [localStream]);
 
+  // Outgoing call
   const handleCallUser = async () => {
+    if (!iceServers.length) {
+      alert("ICE servers not ready. Please wait and try again.");
+      return;
+    }
     setIsCalling(true);
-    // setInCall(true);
-    // Create a peer connection
-    createPeerConnection();
 
-    // Add audio track to the peer connection
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    setLocalStream(stream);
-    stream.getTracks().forEach((track) => {
-      peerConnectionRef.current.addTrack(track, stream);
+    const pc = createPeerConnection();
+    if (!pc) return;
+
+    // Add transceiver to ensure receiving even if remote adds later (mobile compat)
+    if (!pc.getTransceivers().find(t => t.receiver.track && t.receiver.track.kind === "audio")) {
+      pc.addTransceiver("audio", { direction: "sendrecv" });
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
     });
-    // Attach to local audio element (for mute/unmute)
-    const localAudio = document.getElementById("local-audio");
-    if (localAudio) localAudio.srcObject = stream;
+    setLocalStream(stream);
+    stream.getAudioTracks().forEach(track => pc.addTrack(track, stream));
 
-    // Create an offer
-    const offer = await peerConnectionRef.current.createOffer();
-    await peerConnectionRef.current.setLocalDescription(offer);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
 
-    // Send the offer to the receiver
     socketRef.current.emit("call-user", {
       receiverId: userDetail._id,
       offer,
     });
-
-    // Navigate to VoiceCallUI
-    // navigate("/call");
+    console.log("[Signaling] Sent offer");
   };
+
+  const pendingCandidatesRef = useRef([]);
+  useEffect(() => { pendingCandidatesRef.current = pendingCandidates; }, [pendingCandidates]);
 
   const setRemoteDescriptionAndAddCandidates = async (desc) => {
-    if (peerConnectionRef.current) {
-      await peerConnectionRef.current.setRemoteDescription(desc);
-      // Add all pending candidates
-      pendingCandidates.forEach((candidate) => {
-        peerConnectionRef.current.addIceCandidate(candidate);
-      });
-      setPendingCandidates([]); // Clear buffer
+    if (!peerConnectionRef.current) return;
+    await peerConnectionRef.current.setRemoteDescription(desc);
+    for (const c of pendingCandidates) {
+      try {
+        await peerConnectionRef.current.addIceCandidate(c);
+      } catch (err) {
+        console.warn("Add buffered candidate failed", err);
+      }
     }
+    setPendingCandidates([]);
   };
 
-  // Accept incoming call
-  useEffect(() => {
-    if (!socketRef.current) return;
-    socketRef.current.on("incoming-call", async ({ senderId, offer }) => {
-      setIncomingCall({ senderId, offer });
-      // const acceptCall = window.confirm("Incoming call. Do you want to accept?");
-      // if (acceptCall) {
-      //   setInCall(true);
-      //   createPeerConnection();
-
-      //   // Get local audio
-      //   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      //   setLocalStream(stream);
-      //   stream.getTracks().forEach((track) => {
-      //     peerConnectionRef.current.addTrack(track, stream);
-      //   });
-      //   const localAudio = document.getElementById("local-audio");
-      //   if (localAudio) localAudio.srcObject = stream;
-
-      //   await peerConnectionRef.current.setRemoteDescription(offer);
-      //   const answer = await peerConnectionRef.current.createAnswer();
-      //   await peerConnectionRef.current.setLocalDescription(answer);
-
-      //   socketRef.current.emit("answer-call", {
-      //     senderId,
-      //     answer,
-      //   });
-      // }
-    });
-
-    socketRef.current.on("call-answered", async ({ answer }) => {
-      await setRemoteDescriptionAndAddCandidates(answer);
-      setCallConnected(true);
-    });
-
-    socketRef.current.on("ice-candidate", ({ candidate }) => {
-      if (peerConnectionRef.current && candidate) {
-        if (
-          peerConnectionRef.current.remoteDescription &&
-          peerConnectionRef.current.remoteDescription.type
-        ) {
-          peerConnectionRef.current.addIceCandidate(candidate);
-        } else {
-          // Buffer the candidate until remote description is set
-          setPendingCandidates((prev) => [...prev, candidate]);
-        }
-      }
-    });
-
-    return () => {
-      socketRef.current.off("incoming-call");
-      socketRef.current.off("call-answered");
-      socketRef.current.off("ice-candidate");
-    };
-  }, [iceServers, userDetail._id, remoteStream]);
-
-  useEffect(() => {
-    if (
-      peerConnectionRef.current &&
-      peerConnectionRef.current.localDescription &&
-      peerConnectionRef.current.remoteDescription
-    ) {
-      setCallConnected(true);
-      setInCall(true); // <-- MOVE HERE
-      setIsCalling(false);  // Hide "Ringing..." when call is connected
-    }
-  }, [
-    peerConnectionRef.current?.localDescription,
-    peerConnectionRef.current?.remoteDescription,
-  ]);
-
+  // Accept call
   const handleAcceptCall = async () => {
+    if (!iceServers.length) {
+      alert("ICE servers not ready.");
+      return;
+    }
     setInCall(true);
     setIncomingCall(null);
-    createPeerConnection();
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    setLocalStream(stream);
-    stream.getTracks().forEach((track) => {
-      peerConnectionRef.current.addTrack(track, stream);
+    const pc = createPeerConnection();
+    if (!pc) return;
+
+    if (!pc.getTransceivers().find(t => t.receiver.track && t.receiver.track.kind === "audio")) {
+      pc.addTransceiver("audio", { direction: "sendrecv" });
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
     });
-    const localAudio = document.getElementById("local-audio");
-    if (localAudio) localAudio.srcObject = stream;
+    setLocalStream(stream);
+    stream.getAudioTracks().forEach(track => pc.addTrack(track, stream));
 
     await setRemoteDescriptionAndAddCandidates(incomingCall.offer);
-    const answer = await peerConnectionRef.current.createAnswer();
-    await peerConnectionRef.current.setLocalDescription(answer);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+  // Receiver side: we now know both offer (remote) and answer (local)
+  // so mark call as connected immediately (previous effect wasn't reliable)
+  setCallConnected(true);
+  setIsCalling(false);
 
     socketRef.current.emit("answer-call", {
       senderId: incomingCall.senderId,
       answer,
     });
+    console.log("[Signaling] Sent answer");
   };
 
   // CallReject
 
   const handleRejectCall = () => {
+    if (!incomingCall) return;
     socketRef.current.emit("reject-call", { senderId: incomingCall.senderId });
     setIncomingCall(null);
   };
@@ -365,54 +306,97 @@ const MassagePage = () => {
     }
   };
 
-  // End call
-  const handleEndCall = () => {
+  // Central cleanup
+  const cleanupCallState = () => {
+    setIsCalling(false);
     setInCall(false);
     setCallConnected(false);
     setCallDuration(0);
-    setIsCalling(false);
+    setIncomingCall(null);
     if (peerConnectionRef.current) {
+      peerConnectionRef.current.ontrack = null;
+      peerConnectionRef.current.onicecandidate = null;
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
     if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
+      localStream.getTracks().forEach(t => t.stop());
       setLocalStream(null);
     }
     setRemoteStream(null);
+  };
+  // Central cleanup
 
-    // Emit end-call to the other user
-    if (socketRef.current && userDetail._id) {
-      socketRef.current.emit("end-call", { receiverId: userDetail._id });
-    }
-    // Also clear incoming call modal if present
-    setIncomingCall(null);
+  // End call
+  const handleEndCall = () => {
+    socketRef.current.emit("end-call", { receiverId: userDetail._id });
+    cleanupCallState();
   };
 
+  // Signaling listeners
   useEffect(() => {
     if (!socketRef.current) return;
-    const handleCallEnded = () => {
-      setInCall(false);
-      setCallConnected(false);
-      setCallDuration(0);
+
+    const onIncoming = ({ senderId, offer }) => {
+      console.log("Incoming call from", senderId);
+      setIncomingCall({ senderId, offer });
       setIsCalling(false);
-      setIncomingCall(null); // <-- Hide Accept/Reject modal
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-        setLocalStream(null);
-      }
-      setRemoteStream(null);
-      // Optionally show a message or notification
     };
-    socketRef.current.on("call-ended", handleCallEnded);
+
+    const onAnswered = async ({ answer }) => {
+      console.log("Call answered");
+      await setRemoteDescriptionAndAddCandidates(answer);
+  // Caller side: we now have remote answer => call is connected
+  setCallConnected(true);
+  setInCall(true);
+  setIsCalling(false);
+    };
+
+    const onRejected = () => {
+      alert("Call rejected");
+      cleanupCallState();
+    };
+
+    const onEnded = () => {
+      console.log("Call ended remotely");
+      cleanupCallState();
+    };
+    const onCandidate = ({ candidate }) => {
+      if (!peerConnectionRef.current || !candidate) return;
+      if (
+        peerConnectionRef.current.remoteDescription &&
+        peerConnectionRef.current.remoteDescription.type
+      ) {
+        peerConnectionRef.current.addIceCandidate(candidate)
+          .catch(err => console.warn("Add candidate error", err));
+      } else {
+        setPendingCandidates(prev => [...prev, candidate]);
+      }
+    };
+    socketRef.current.on("ice-candidate", onCandidate);
+    socketRef.current.on("incoming-call", onIncoming);
+    socketRef.current.on("call-answered", onAnswered);
+    socketRef.current.on("call-rejected", onRejected);
+    socketRef.current.on("call-ended", onEnded);
+
     return () => {
-      socketRef.current.off("call-ended", handleCallEnded);
+      socketRef.current.off("incoming-call", onIncoming);
+      socketRef.current.off("call-answered", onAnswered);
+      socketRef.current.off("call-rejected", onRejected);
+      socketRef.current.off("call-ended", onEnded);
+      socketRef.current.off("ice-candidate", onCandidate);
     };
-  }, [localStream]);
+  }, [userDetail._id, iceServers, localStream, pendingCandidates]);
+
+  // Removed effect that tried to infer connection from RTCPeerConnection descriptions;
+  // we now set callConnected/inCall explicitly in signaling handlers for reliability.
+
+  // Timer (start only when both inCall and callConnected true)
+  useEffect(() => {
+    if (!(inCall && callConnected)) return;
+    const id = setInterval(() => setCallDuration(d => d + 1), 1000);
+    return () => clearInterval(id);
+  }, [inCall, callConnected]);
 
   useEffect(() => {
     const handler = (data) => {
@@ -439,19 +423,6 @@ const MassagePage = () => {
     };
   }, [currentUser._id, userDetail.profilePic]);
 
-  if (currentUser._id === params.userId) {
-    console.log("Self-chat detected. Redirecting...");
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="bg-gray-900 text-white p-4 rounded-lg shadow-lg">
-          <h2 className="text-3xl font-bold">You cannot chat with yourself</h2>
-          <Link to="/card" className="text-blue-400 hover:underline mt-4 inline-block">
-            Go back to chat list
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const formatTimeAndDay = (timestamp) => {
     const dateObj = new Date(timestamp);
@@ -483,7 +454,6 @@ const MassagePage = () => {
           receiver: params?.userId,
           text: massage.text,
           imageUrl: massage.imageUrl,
-          videoUrl: massage.videoUrl,
           timestamp: new Date().toISOString(),
           status: "sent", // Initial status
         };
@@ -492,7 +462,6 @@ const MassagePage = () => {
         setMassage({
           text: "",
           imageUrl: "",
-          videoUrl: ""
         })
       }
     }
@@ -521,27 +490,6 @@ const MassagePage = () => {
     })
   }
 
-  const handleUploadVideo = async (e) => {
-    const file = e.target.files[0]
-    setLoading(true)
-    const uploadPhoto = await UploadFile(file)
-    setLoading(false)
-    setOpenImageVideoUpload(false)
-    setMassage(preve => {
-      return {
-        ...preve,
-        videoUrl: uploadPhoto.url
-      }
-    })
-  }
-  const handleClearUploadVideo = () => {
-    setMassage(preve => {
-      return {
-        ...preve,
-        videoUrl: ""
-      }
-    })
-  }
   // Update message status when received by the receiver
   useEffect(() => {
     const handler = (data) => {
@@ -563,29 +511,6 @@ const MassagePage = () => {
     setMassage({ ...massage, [e.target.name]: e.target.value });
   };
 
-  useEffect(() => {
-    if (!socketRef.current) return;
-    socketRef.current.on("call-rejected", () => {
-      // Show a message or modal: "Call was rejected"
-      setInCall(false);
-      setIsCalling(false);
-      setCallConnected(false);
-      setCallDuration(0);
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-        setLocalStream(null);
-      }
-      setRemoteStream(null);
-      alert("Call was rejected");
-    });
-    return () => {
-      socketRef.current.off("call-rejected");
-    };
-  }, [localStream]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center overflow-hidden"
@@ -674,11 +599,28 @@ const MassagePage = () => {
                   <FaPhoneSlash size={24} />
                 </button>
               </div>
-              <audio id="local-audio" autoPlay />
-              <audio id="remote-audio" autoPlay />
+              <audio id="local-audio" autoPlay muted playsInline style={{ display: "none" }} />
+              <audio id="remote-audio" autoPlay playsInline style={{ display: "none" }} />
             </div>
           </div>
         )}
+
+        {/* Self chatting UI */}
+
+        {(() => {
+          if (currentUser._id === params.userId) {
+            return (
+              <div className="min-h-screen w-full flex items-center justify-center">
+                <div className="bg-gray-900 text-white p-4 rounded-lg shadow-lg">
+                  <h2 className="text-3xl font-bold">You cannot chat with yourself</h2>
+                  <Link to="/card" className="text-blue-400 hover:underline mt-4 inline-block">
+                    Go back to chat list
+                  </Link>
+                </div>
+              </div>
+            );
+          }
+        })()}
 
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b">
           <div className="flex items-center gap-4">
@@ -706,7 +648,7 @@ const MassagePage = () => {
             onClick={handleCallUser}
             className="ml-2 bg-green-500 text-white p-3 rounded-full hover:bg-green-600 transition"
             title="Call"
-            disabled={inCall}
+            disabled={inCall || isCalling || iceServers.length === 0}
           >
             <FaPhone size={19} />
           </button>
@@ -752,15 +694,6 @@ const MassagePage = () => {
                       )
                     }
                     {
-                      msg?.videoUrl && (
-                        <video
-                          src={msg.videoUrl}
-                          className='w-60 h-60 object-scale-down  rounded-lg '
-                          controls
-                        />
-                      )
-                    }
-                    {
                       msg?.text && (
                         <div
                           className={`px-5 py-2 rounded-xl max-w-[70vw]
@@ -773,11 +706,11 @@ const MassagePage = () => {
                         </div>
                       )
                     }
-                    <div className="text-xs text-gray-950 mt-1 text-left flex items-center gap-1">
+                    <div className="text-xs text-gray-950 mt-1 text-right flex items-center gap-1">
                       {time}
                       {isCurrentUser && (
                         <span
-                          className={`mr-2 ${msg.status === "received" ? "text-pink-400" : "text-red-700"}`}
+                          className={`mr-2 ${msg.status === "received" ? "text-pink-400" : "text-red-900"}`}
                         >
                           {msg.status === "received" ? "✔✔" : "✔"}
                         </span>
@@ -814,25 +747,6 @@ const MassagePage = () => {
             )
           }
 
-          {/**upload video display */}
-          {
-            massage.videoUrl && (
-              <div className='w-full h-full sticky bottom-0 bg-slate-700 bg-opacity-30 flex justify-center items-center rounded overflow-hidden'>
-                <div className='w-fit p-2 absolute top-0 right-0 cursor-pointer hover:text-red-600' onClick={handleClearUploadVideo}>
-                  <IoClose size={30} />
-                </div>
-                <div className='bg-white p-3'>
-                  <video
-                    src={massage.videoUrl}
-                    className='aspect-square w-full h-full max-w-sm m-2 object-scale-down'
-                    controls
-                    muted
-                    autoPlay
-                  />
-                </div>
-              </div>
-            )
-          }
         </ScrollToBottom>
         <section className='h-16 bg-white flex items-center px-4'>
           <div className='relative '>
