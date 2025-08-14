@@ -871,7 +871,8 @@ const MassagePage = () => {
             </div>
           )}
 
-          {/* Call UI */}
+
+          {/* Call UI with some design */}
           {inCall && (
             <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200">
               <div className="bg-white/80 rounded-3xl shadow-2xl p-10 flex flex-col items-center border-4 border-pink-300">
