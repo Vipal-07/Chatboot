@@ -14,7 +14,6 @@ const cookiesParser = require('cookie-parser')
 const httpServer = createServer(app);
 const { UserDetailsByToken } = require('./middleWare.js');
 const frontendUrl = process.env.FRONTEND_URL;
-const serviceAccount = require('./serviceAccountKey.json');
 
 
 
