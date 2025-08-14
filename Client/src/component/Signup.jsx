@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useState, useEffect } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { Link, useNavigate } from 'react-router-dom';
@@ -56,15 +56,15 @@ export default function Signup() {
       const response = await axios.post(URL + "/signup", data);
       toast.success(response.data.message)
       if (response.data.success) {
-        setData({
-          name: "",
-          username: "",
-          password: "",
-          profilePic: "",
-        })
-
-        navigate('/card')
-
+        // Auto-login after successful signup to establish session cookie
+        try {
+          const loginRes = await axios.post(URL + '/login', { username: data.username, password: data.password }, { withCredentials: true });
+          if (loginRes.data?.success) {
+            navigate('/card');
+            return;
+          }
+        } catch { /* fallback below */ }
+        navigate('/login');
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Signup failed. Please try again.");
@@ -72,6 +72,18 @@ export default function Signup() {
       setSigningUp(false);
     }
   };
+
+  // Redirect authenticated users away from signup
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get(`${BACKEND_URL}/me`, { withCredentials: true });
+        if (!cancelled && res.data?.success) navigate('/card');
+      } catch { }
+    })();
+    return () => { cancelled = true; };
+  }, [BACKEND_URL, navigate]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center overflow-hidden"

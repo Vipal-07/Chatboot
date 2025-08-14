@@ -1,9 +1,31 @@
 {
+  "name": "Weather App",
   "short_name": "Weather",
-  "name": "Weather",
-  "start_url": ".",
+  "description": "Hidden chat behind weather interface with secure sliding session.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000"
-
+  "orientation": "portrait-primary",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "id": "chatboot.app",
+  "categories": ["social", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/weather-app.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/weather-app.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "/weather-app.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "/weather-app.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/weather-app.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Open Chats", "short_name": "Chats", "url": "/card", "icons": [{ "src": "/weather-app.png", "sizes": "192x192" }] },
+    { "name": "Start New Chat", "short_name": "New Chat", "url": "/card?new=1", "icons": [{ "src": "/weather-app.png", "sizes": "192x192" }] }
+  ],
+  "share_target": {
+    "action": "/card",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
 }

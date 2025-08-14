@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { requestFcmTokenAndRegister } from '../firebase.js';
 
 export default function Login() {
   const [data, setData] = useState({
@@ -18,23 +19,30 @@ export default function Login() {
 
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
+  // Redirect already-authenticated users
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get(`${BACKEND_URL}/me`, { withCredentials: true });
+        if (!cancelled && res.data?.success) navigate('/card');
+      } catch { }
+    })();
+    return () => { cancelled = true; };
+  }, [BACKEND_URL, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLogin(true)
     const URL = BACKEND_URL;
     try {
       const response = await axios.post(URL + "/login", data, { withCredentials: true });
-      console.log(response.data);
       toast.success(response.data.message)
       if (response.data.success) {
-         localStorage.setItem('token',response?.data?.token) // Remove this line
-        setData({
-          username: "",
-          password: "",
-        })
-
-        navigate('/card')
-
+        // register FCM token in background (don't block navigation)
+        requestFcmTokenAndRegister();
+        setData({ username: "", password: "" });
+        navigate('/card');
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Login failed. Please try again.");
