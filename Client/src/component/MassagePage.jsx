@@ -871,29 +871,51 @@ const MassagePage = () => {
             </div>
           )}
 
-          {/* Call UI */}
+
+          {/* Call UI with some design */}
           {inCall && (
-            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-60">
-              <div className="bg-white/80 rounded-xl shadow-2xl p-8 flex flex-col items-center">
-                <div className="text-3xl font-bold mb-4 text-black">
-                  {formatDuration(callDuration)}
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200">
+              <div className="bg-white/80 rounded-3xl shadow-2xl p-10 flex flex-col items-center border-4 border-pink-300">
+                {/* Animated hearts background */}
+                <div className="absolute inset-0 pointer-events-none z-0">
+                  <div className="absolute animate-pulse left-10 top-10 text-pink-400 text-6xl opacity-40">💖</div>
+                  <div className="absolute animate-bounce right-16 top-24 text-red-400 text-5xl opacity-30">💘</div>
+                  <div className="absolute animate-pulse left-1/2 bottom-10 text-pink-300 text-7xl opacity-30">💞</div>
+                  <div className="absolute animate-bounce right-1/4 bottom-20 text-purple-400 text-6xl opacity-30">💝</div>
                 </div>
-                <div className="flex items-center gap-8 mb-4">
+                {/* User avatars and call info */}
+                <div className="relative z-10 flex flex-col items-center mb-6">
+                  <img
+                    src="https://thumbs.dreamstime.com/b/head-silhouette-face-front-view-human-elegant-part-human-vector-illustration-79409597.jpg"
+                    alt="User"
+                    className="w-24 h-24 rounded-full border-4 border-pink-400 shadow-lg mb-2"
+                  />
+                  <div className="text-2xl font-bold text-pink-600 mb-1">Talking with {userDetail.name}</div>
+                  <div className="text-lg text-purple-500 mb-2">Connected 💑</div>
+                  <div className="text-4xl font-bold text-pink-500 mb-2 tracking-wide drop-shadow-lg">
+                    {formatDuration(callDuration)}
+                  </div>
+                </div>
+                {/* Call controls */}
+                <div className="relative z-10 flex items-center gap-10 mb-2">
                   <button
                     onClick={handleMuteToggle}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center ${isMuted ? "bg-gray-500" : "bg-green-500"
-                      } text-white shadow-lg hover:opacity-90 transition`}
+                    className={`w-16 h-16 rounded-full flex items-center justify-center ${isMuted ? "bg-gray-400" : "bg-pink-400"} text-white shadow-xl hover:scale-105 transition-transform duration-200`}
                     title={isMuted ? "Unmute" : "Mute"}
                   >
-                    {isMuted ? <FaMicrophoneSlash size={28} /> : <FaMicrophone size={28} />}
+                    {isMuted ? <FaMicrophoneSlash size={32} /> : <FaMicrophone size={32} />}
                   </button>
                   <button
                     onClick={handleEndCall}
-                    className="w-16 h-16 rounded-full bg-red-500 text-white shadow-lg hover:opacity-90 transition flex items-center justify-center"
+                    className="w-16 h-16 rounded-full bg-red-500 text-white shadow-xl hover:scale-105 transition-transform duration-200 flex items-center justify-center border-4 border-pink-300"
                     title="End Call"
                   >
-                    <FaPhoneSlash size={24} />
+                    <FaPhoneSlash size={32} />
                   </button>
+                </div>
+                {/* Animated text for romantic effect */}
+                <div className="relative z-10 mt-4 text-xl text-pink-400 font-semibold animate-pulse">
+                  "Love is in the air... Enjoy your call!"
                 </div>
                 <audio id="local-audio" autoPlay muted playsInline style={{ display: "none" }} />
                 <audio id="remote-audio" autoPlay playsInline style={{ display: "none" }} />
