@@ -1,0 +1,11 @@
+body {
+  font-family: 'Quicksand', sans-serif;
+}
+.romantic-heading {
+  font-family: 'Dancing Script', cursive;
+  font-weight: 700;
+  color: #e75480;
+  text-shadow: 0 2px 8px #fff7, 0 1px 0 #f9c;
+}
+
+@import "tailwindcss";
