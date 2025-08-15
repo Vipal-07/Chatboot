@@ -808,7 +808,6 @@ const MassagePage = () => {
 
   return (
     <>
-      <audio ref={ringtoneRef} src="/krishna-flute.mp3" loop preload="auto" style={{ display: 'none' }} />
       <div className="min-h-screen w-full flex items-center justify-center overflow-hidden"
         style={{
           backgroundImage: `
