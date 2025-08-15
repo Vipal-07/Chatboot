@@ -141,7 +141,6 @@ io.on('connection', async (socket) => {
 
     socket.on('get-user-details', async (userId) => {
         try {
-            console.log('[Socket] get-user-details request', { requester: currentUser._id.toString(), userId });
             if (!userId || !userId.match(/^[0-9a-fA-F]{24}$/)) {
                 console.warn('[Socket] invalid userId format', userId);
                 return;
@@ -234,7 +233,6 @@ io.on('connection', async (socket) => {
     })
 
     socket.on('disconnect', () => {
-        console.log(`User disconnected: ${currentUser?._id}`);
         if (currentUser && currentUser._id) {
             onlineUsers.delete(currentUser._id.toString());
             io.emit('user-online-status', { userId: currentUser._id, isOnline: false });
