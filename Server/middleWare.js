@@ -1,10 +1,11 @@
 const User = require("./models/userSchema.js");
 const jwt = require('jsonwebtoken')
+const wrapAsync = require('./wrapAsync.js');
 
 // tokengenerator
 
 
-module.exports.UserDetailsByToken = async (token) => {
+module.exports.UserDetailsByToken = wrapAsync(async (token) => {
 
 
     if (!token) {
@@ -23,6 +24,8 @@ module.exports.UserDetailsByToken = async (token) => {
         return null; // Return null if token is invalid
     }
 }
+)
+
 
 
 
