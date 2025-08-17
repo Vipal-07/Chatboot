@@ -120,6 +120,7 @@ const MassagePage = () => {
     };
     // Track handler for remote audio (avoid duplicate adds)
     peerConnectionRef.current.ontrack = (event) => {
+      console.log("[RTC] Remote track received kind=", event.track.kind, "id=", event.track.id);
       setRemoteStream(prev => {
         const inbound = prev || new MediaStream();
         const exists = inbound.getTracks().some(t => t.id === event.track.id);
@@ -142,6 +143,7 @@ const MassagePage = () => {
       if (s === 'failed') {
         if (pc.restartIce) {
           try {
+            console.log('[RTC] Attempting ICE restart');
             pc.restartIce();
           } catch (e) {
             console.warn('[RTC] restartIce failed', e);
@@ -158,6 +160,7 @@ const MassagePage = () => {
     };
     peerConnectionRef.current.onconnectionstatechange = () => {
       const state = peerConnectionRef.current.connectionState;
+      console.log("[RTC] Connection state:", state);
       if (state === "connected") {
         setCallConnected(true); // Fallback in case we missed manual set
       }
@@ -261,6 +264,7 @@ const MassagePage = () => {
       if (remoteEl && remoteEl.srcObject !== remoteStream) {
         remoteEl.srcObject = remoteStream;
         remoteEl.play().catch(() => { });
+        console.log("[RTC] Remote stream re-attached after UI mount");
       }
     }
   }, [remoteStream, inCall]);
@@ -270,6 +274,7 @@ const MassagePage = () => {
       const localEl = document.getElementById("local-audio");
       if (localEl && localEl.srcObject !== localStream) {
         localEl.srcObject = localStream;
+        console.log("[RTC] Local stream attached/re-attached");
       }
     }
   }, [localStream]);
@@ -339,6 +344,7 @@ const MassagePage = () => {
       const offer = await pc.createOffer({ offerToReceiveAudio: true });
       await pc.setLocalDescription(offer);
       socketRef.current.emit("call-user", { receiverId: userDetail._id, offer });
+      console.log("[Signaling] Sent offer to", userDetail._id, 'using', iceServers.length, 'ICE servers');
     } catch (err) {
       console.error("[Call] Failed to start call:", err);
       setIsCalling(false);
@@ -403,11 +409,13 @@ const MassagePage = () => {
     setIsCalling(false);
 
     socketRef.current.emit("answer-call", { senderId: incomingCall.senderId, answer });
+    console.log("[Signaling] Sent answer with local audio track id=", audioTrack?.id);
   };
 
   // TURN-only (relay) fallback renegotiation
   const attemptRelayFallback = async () => {
     if (!peerConnectionRef.current || usingRelayRef.current) return;
+    console.log('[RTC] Initiating relay-only fallback');
     try {
       const relayIce = iceServers.filter(s => /turn:/i.test((s.urls || '').toString()));
       if (!relayIce.length) { console.warn('[RTC] No TURN servers available for fallback'); return; }
@@ -427,6 +435,7 @@ const MassagePage = () => {
         }
       };
       newPc.oniceconnectionstatechange = () => {
+        console.log('[RTC][Relay] iceConnectionState=', newPc.iceConnectionState);
       };
       if (streams.length) {
         streams.forEach(stream => {
@@ -438,6 +447,7 @@ const MassagePage = () => {
       const offer = await newPc.createOffer({ offerToReceiveAudio: true });
       await newPc.setLocalDescription(offer);
       socketRef.current.emit('relay-upgrade-offer', { receiverId: userDetail._id, offer });
+      console.log('[RTC] Sent relay-upgrade-offer');
       oldPc.close();
     } catch (e) {
       console.warn('[RTC] Relay fallback failed', e);
@@ -498,12 +508,14 @@ const MassagePage = () => {
     if (!socketRef.current) return;
 
     const onIncoming = ({ senderId, offer }) => {
+      console.log("Incoming call from", senderId);
       playRingtone(); // Play ringtone on incoming call
       setIncomingCall({ senderId, offer });
       setIsCalling(false);
     };
 
     const onAnswered = async ({ answer }) => {
+      console.log("Call answered");
       await setRemoteDescriptionAndAddCandidates(answer);
       setInCall(true);
       setIsCalling(false);
@@ -519,6 +531,7 @@ const MassagePage = () => {
 
     const onEnded = () => {
       stopRingtone()
+      console.log("Call ended remotely");
       cleanupCallState();
     };
 
@@ -537,6 +550,7 @@ const MassagePage = () => {
 
     // Relay fallback signaling
     const onRelayOffer = async ({ offer, senderId }) => {
+      console.log('[RTC] Received relay-upgrade-offer');
       const relayIce = iceServers.filter(s => /turn:/i.test((s.urls || '').toString()));
       if (!relayIce.length) { console.warn('[RTC] No TURN servers to answer relay offer'); return; }
       // Build new PC forced relay
@@ -556,9 +570,11 @@ const MassagePage = () => {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       socketRef.current.emit('relay-upgrade-answer', { senderId, answer });
+      console.log('[RTC] Sent relay-upgrade-answer');
     };
     const onRelayAnswer = async ({ answer }) => {
       if (!peerConnectionRef.current) return;
+      console.log('[RTC] Received relay-upgrade-answer');
       await peerConnectionRef.current.setRemoteDescription(answer);
     };
 
@@ -642,6 +658,7 @@ const MassagePage = () => {
     const handleOnline = () => {
       const pc = peerConnectionRef.current;
       if (pc && inCall) {
+        console.log('[RTC] Network online event -> restartIce');
         try { pc.restartIce && pc.restartIce(); } catch { }
       }
     };
@@ -791,6 +808,7 @@ const MassagePage = () => {
 
   return (
     <>
+      <audio ref={ringtoneRef} src="/flute.mp3" loop preload="auto" style={{ display: 'none' }} />
       <div className="min-h-screen w-full flex items-center justify-center overflow-hidden"
         style={{
           backgroundImage: `
@@ -872,7 +890,7 @@ const MassagePage = () => {
                     alt="User"
                     className="w-24 h-24 rounded-full border-4 border-pink-400 shadow-lg mb-2"
                   />
-                  <div className="text-2xl font-bold text-pink-600 mb-1">Talking with {userDetail.name}</div>
+                  <div className="text-2xl font-bold text-pink-600 mb-1">Talking with Anonymous</div>
                   <div className="text-lg text-purple-500 mb-2">Connected 💑</div>
                   <div className="text-4xl font-bold text-pink-500 mb-2 tracking-wide drop-shadow-lg">
                     {formatDuration(callDuration)}
