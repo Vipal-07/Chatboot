@@ -13,9 +13,9 @@ const redis = require('redis');
 const cookiesParser = require('cookie-parser')
 const httpServer = createServer(app);
 const { UserDetailsByToken } = require('./middleWare.js');
+const wrapAsync = require('./wrapAsync.js');
 const frontendUrl = process.env.FRONTEND_URL;
-
-
+// const serviceAccount = require('./serviceAccountKey.json');
 
 // Firebase Admin initialization
 try {
@@ -141,6 +141,7 @@ io.on('connection', async (socket) => {
 
     socket.on('get-user-details', async (userId) => {
         try {
+            console.log('[Socket] get-user-details request', { requester: currentUser._id.toString(), userId });
             if (!userId || !userId.match(/^[0-9a-fA-F]{24}$/)) {
                 console.warn('[Socket] invalid userId format', userId);
                 return;
@@ -233,6 +234,7 @@ io.on('connection', async (socket) => {
     })
 
     socket.on('disconnect', () => {
+        console.log(`User disconnected: ${currentUser?._id}`);
         if (currentUser && currentUser._id) {
             onlineUsers.delete(currentUser._id.toString());
             io.emit('user-online-status', { userId: currentUser._id, isOnline: false });
@@ -242,49 +244,41 @@ io.on('connection', async (socket) => {
 })
 
 app.route("/signup")
-    .post(usersController.signUpFunction)
+    .post(wrapAsync(usersController.signUpFunction))
 
 app.route("/login")
-    .post(usersController.loginFunction)
+    .post(wrapAsync(usersController.loginFunction))
 
 app.route("/logout")
-    .post(usersController.logoutFunction)
+    .post(wrapAsync(usersController.logoutFunction))
 
 app.route("/card")
-    .post(usersController.getUser)
+    .post(wrapAsync(usersController.getUser))
 
 app.route("/credential")
-    .get(usersController.credential)
+    .get(wrapAsync(usersController.credential))
 
 app.route('/me')
-    .get(usersController.meFunction)
+    .get(wrapAsync(usersController.meFunction))
 
 // Store FCM token for current user
-app.post('/fcm/register', async (req, res) => {
-    try {
-        const tokenCookie = req.cookies?.token;
-        if (!tokenCookie) return res.status(401).json({ success: false, message: 'unauthorized' });
-        const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(tokenCookie, process.env.TOKEN_SCRETE);
-        const { fcmToken } = req.body || {};
-        if (!fcmToken) return res.status(400).json({ success: false, message: 'missing fcmToken' });
-        await User.findByIdAndUpdate(decoded.id, { fcmToken });
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ success: false, message: e.message });
-    }
-});
+app.post('/fcm/register', wrapAsync(async (req, res) => {
+    const tokenCookie = req.cookies?.token;
+    if (!tokenCookie) return res.status(401).json({ success: false, message: 'unauthorized' });
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(tokenCookie, process.env.TOKEN_SCRETE);
+    const { fcmToken } = req.body || {};
+    if (!fcmToken) return res.status(400).json({ success: false, message: 'missing fcmToken' });
+    await User.findByIdAndUpdate(decoded.id, { fcmToken });
+    res.json({ success: true });
+}));
 
 // Fallback REST endpoint to fetch a user's public details by id (used if socket event misses)
-app.get('/user/:id', async (req, res) => {
-    try {
-        const u = await User.findById(req.params.id).select('_id name username profilePic');
-        if (!u) return res.status(404).json({ success: false, message: 'User not found' });
-        return res.json({ success: true, data: u });
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message || e });
-    }
-});
+app.get('/user/:id', wrapAsync(async (req, res) => {
+    const u = await User.findById(req.params.id).select('_id name username profilePic');
+    if (!u) return res.status(404).json({ success: false, message: 'User not found' });
+    return res.json({ success: true, data: u });
+}));
 
 
 app.get('/', (req, res) => {
@@ -294,3 +288,10 @@ app.get('/', (req, res) => {
 httpServer.listen(5000, () => {
     console.log('Server is running on port 5000');
 })
+
+// Centralized Express error handler (captures errors forwarded by wrapAsync)
+app.use((err, req, res, next) => {
+    console.error('Express error:', err && err.stack ? err.stack : err);
+    const status = err && err.status ? err.status : 500;
+    res.status(status).json({ success: false, message: err && err.message ? err.message : 'Internal Server Error' });
+});
