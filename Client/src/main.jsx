@@ -15,7 +15,14 @@ if ('serviceWorker' in navigator) {
       .then(reg => {
         console.log('[PWA] Service Worker registered', reg.scope);
   // Attempt FCM registration (non-blocking)
-  requestFcmTokenAndRegister();
+  // Check auth first to avoid 401 when calling /fcm/register
+  fetch(`${import.meta.env.VITE_BACKEND_URL}/me`, { credentials: 'include' }).then(r => {
+    if (r.ok) {
+      requestFcmTokenAndRegister();
+    } else {
+      console.log('[PWA] Skipping FCM registration; user not authenticated');
+    }
+  }).catch(err => console.warn('[PWA] /me check failed', err));
       })
       .catch(err => console.error('[PWA] SW register failed', err));
   });
