@@ -11,6 +11,7 @@ const { Server } = require("socket.io");
 const cors = require('cors');
 const redis = require('redis');
 const cookiesParser = require('cookie-parser')
+const wrapSocketAsync = require('./wrapSocketAsync.js');
 const httpServer = createServer(app);
 const { UserDetailsByToken } = require('./middleWare.js');
 const wrapAsync = require('./wrapAsync.js');
@@ -70,7 +71,7 @@ const io = new Server(httpServer, {
         credentials: true,
     }
 });
-io.on('connection', async (socket) => {
+io.on('connection', wrapSocketAsync(async (socket) => {
     // Support token from handshake auth or cookie (sliding session cookie)
     let token = socket.handshake?.auth?.token;
     if (!token) {
@@ -241,7 +242,7 @@ io.on('connection', async (socket) => {
         }
     })
 
-})
+}));
 
 app.route("/signup")
     .post(wrapAsync(usersController.signUpFunction))
