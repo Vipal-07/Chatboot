@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { requestFcmTokenAndRegister } from '../firebase.js';
 
 export default function Login() {
   const [data, setData] = useState({
@@ -19,17 +18,8 @@ export default function Login() {
 
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-  // Redirect already-authenticated users
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await axios.get(`${BACKEND_URL}/me`, { withCredentials: true });
-        if (!cancelled && res.data?.success) navigate('/card');
-      } catch { }
-    })();
-    return () => { cancelled = true; };
-  }, [BACKEND_URL, navigate]);
+  // Skip server-side /me pre-check. Use localStorage flag if you want to redirect already logged users.
+  // if (localStorage.getItem('auth')) navigate('/card');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,9 +29,15 @@ export default function Login() {
       const response = await axios.post(URL + "/login", data, { withCredentials: true });
       toast.success(response.data.message)
       if (response.data.success) {
-        // register FCM token in background (don't block navigation)
-        requestFcmTokenAndRegister();
         setData({ username: "", password: "" });
+        // Mark session locally and cache user profile for UI
+        localStorage.setItem('auth', '1');
+        if (response.data.user) {
+          try { localStorage.setItem('user', JSON.stringify(response.data.user)); } catch {}
+        }
+        if (response.data.token) {
+          try { localStorage.setItem('token', response.data.token); } catch {}
+        }
         navigate('/card');
       }
     } catch (error) {
