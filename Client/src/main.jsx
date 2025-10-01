@@ -9,47 +9,5 @@ createRoot(document.getElementById('root')).render(
  
 );
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(reg => {
-        console.log('[PWA] Service Worker registered', reg.scope);
-  // Attempt FCM registration (non-blocking)
-  // Check auth first to avoid 401 when calling /fcm/register
-  fetch(`${import.meta.env.VITE_BACKEND_URL}/me`, { credentials: 'include' }).then(r => {
-    if (r.ok) {
-      requestFcmTokenAndRegister();
-    } else {
-      console.log('[PWA] Skipping FCM registration; user not authenticated');
-    }
-  }).catch(err => console.warn('[PWA] /me check failed', err));
-      })
-      .catch(err => console.error('[PWA] SW register failed', err));
-  });
- 
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SW_UPDATE_READY') {
-      // Simple auto-refresh approach; could show toast instead
-      console.log('[PWA] New version available, updating...');
-      navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg && reg.waiting) {
-          reg.waiting.postMessage('SKIP_WAITING');
-          // After skipWaiting, reload to get new assets
-          setTimeout(() => window.location.reload(), 600);
-        }
-      });
-    } else if (event.data && event.data.type === 'OPEN_CHAT') {
-      const targetUrl = event.data.url || '/';
-      if (window.__APP_NAVIGATE) {
-        // Use React Router navigate exposed by App
-        window.__APP_NAVIGATE(targetUrl);
-      } else {
-        // Fallback: manipulate history (may not trigger rerender until user interacts)
-        if (window.location.pathname + window.location.search !== targetUrl) {
-          window.history.pushState({}, '', targetUrl);
-        }
-      }
-      window.dispatchEvent(new CustomEvent('chat-open-from-notification', { detail: event.data }));
-    }
-  });
-}
+// Service worker usage removed per request. FCM registration will still work without SW for foreground usage only.
+// If you need background notifications, re-enable SW registration here.
