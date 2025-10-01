@@ -18,25 +18,18 @@ export default function CardRearch() {
 
   const navigate = useNavigate()
 
-  // Fetch current user via /me (sliding session) on mount
+  // Load current user details from localStorage (set on login)
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setCurrentUserLoading(true);
-        const res = await axios.get(`${BACKEND_URL}/me`, { withCredentials: true });
-        if (!cancelled) {
-          if (res.data?.success) setCurrentUser(res.data.data);
-          else setCurrentUserError('Not authenticated');
-        }
-      } catch (e) {
-        if (!cancelled) setCurrentUserError('Failed to load profile');
-      } finally {
-        if (!cancelled) setCurrentUserLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [BACKEND_URL]);
+    try {
+      const u = localStorage.getItem('user');
+      if (u) setCurrentUser(JSON.parse(u));
+      else setCurrentUserError('Not authenticated');
+    } catch {
+      setCurrentUserError('Failed to load profile');
+    } finally {
+      setCurrentUserLoading(false);
+    }
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -44,6 +37,10 @@ export default function CardRearch() {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
+      // clear local flags
+      localStorage.removeItem('auth');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
       navigate("/login");
     }
   };
