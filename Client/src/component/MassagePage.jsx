@@ -10,7 +10,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import ScrollToBottom from 'react-scroll-to-bottom';
 import axios from 'axios';
 import UploadFile from '../helper/UploadFile'; // Assuming UploadImage is in the same directory
-import { showChatNotification, ensureNotificationPermission } from "../helper/notify";
+// showChatNotification removed per request
 
 const MassagePage = () => {
   const [userDetail, setUserDetail] = useState({
@@ -55,12 +55,29 @@ const MassagePage = () => {
   const params = useParams()
   const socketRef = useRef();
   const navigate = useNavigate();
+  const [socketConnected, setSocketConnected] = useState(false);
 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
   useEffect(() => {
     const backendUrl = BACKEND_URL;
-    socketRef.current = io(backendUrl, { withCredentials: true });
+    let token = '';
+    try { token = localStorage.getItem('token') || ''; } catch {}
+    socketRef.current = io(backendUrl, {
+      withCredentials: true,
+      auth: token ? { token } : undefined,
+    });
+
+    const s = socketRef.current;
+    const onConnect = () => setSocketConnected(true);
+    const onDisconnect = () => setSocketConnected(false);
+    s.on('connect', onConnect);
+    s.on('disconnect', onDisconnect);
+    if (s.connected) setSocketConnected(true);
+    return () => {
+      s.off('connect', onConnect);
+      s.off('disconnect', onDisconnect);
+    };
   }, [BACKEND_URL]);
 
   // Fetch ICE servers (Twilio) with fallback STUN and simple expiry (55 mins)
@@ -97,9 +114,15 @@ const MassagePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser.username]);
 
+  // Load current user from localStorage for sender id and avatar
   useEffect(() => {
-    ensureNotificationPermission();
+    try {
+      const cached = localStorage.getItem('user');
+      if (cached) setCurrentUser(JSON.parse(cached));
+    } catch {}
   }, []);
+
+  // Removed explicit permission request to simplify UX; notifications will request on demand
 
   const createPeerConnection = () => {
     // /////
@@ -181,6 +204,7 @@ const MassagePage = () => {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
+      try { localStorage.removeItem('auth'); localStorage.removeItem('user'); localStorage.removeItem('token'); } catch {}
       navigate('/login');
     }
   };
@@ -669,12 +693,7 @@ const MassagePage = () => {
   useEffect(() => {
     const handler = (data) => {
       setAllMassage((prev) => [...prev, data]);
-      if (data.sender !== currentUser._id) {
-        showChatNotification({
-          title: userDetail.name || 'New Message',
-          body: data.text || 'Image'
-        });
-      }
+      // Foreground notification removed per request
     };
 
     socketRef.current.on("receive-massage", handler);
@@ -707,7 +726,14 @@ const MassagePage = () => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-
+    if (!socketRef.current || !socketConnected) {
+      alert('Connecting... please wait a moment.');
+      return;
+    }
+    if (!currentUser._id) {
+      alert('Your profile is still loading. Try again in a second.');
+      return;
+    }
     if ((massage.text || massage.imageUrl || massage.videoUrl) && currentUser._id !== params.userId) {
       if (socketRef.current) {
         const messageObj = {
@@ -1116,7 +1142,7 @@ const MassagePage = () => {
                 name="text"
                 onChange={handleChange}
               />
-              <button className='text-primary hover:text-secondary'>
+              <button className='text-primary hover:text-secondary' disabled={!socketConnected || !currentUser._id}>
                 <IoMdSend size={28} />
               </button>
             </form>
