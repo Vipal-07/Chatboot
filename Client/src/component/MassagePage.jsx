@@ -343,7 +343,7 @@ const MassagePage = () => {
 
   // Outgoing call
   const handleCallUser = async () => {
-    playRingtone(); // Play ringtone on outgoing call
+    // Play ringtone on outgoing call
     await ensureFreshIceServers();
     if (!iceServers.length) {
       alert("ICE servers not ready. Please wait and try again.");
@@ -397,7 +397,7 @@ const MassagePage = () => {
   };
 
   const handleAcceptCall = async () => {
-    stopRingtone(); // Stop ringtone when call is accepted
+     // Stop ringtone when call is accepted
     if (!incomingCall) return;
     await ensureFreshIceServers();
     if (!iceServers.length) { alert("ICE servers not ready."); return; }
@@ -481,7 +481,7 @@ const MassagePage = () => {
   // CallReject
 
   const handleRejectCall = () => {
-    stopRingtone(); // Stop ringtone when call is rejected
+    // Stop ringtone when call is rejected
     if (!incomingCall) return;
     socketRef.current.emit("reject-call", { senderId: incomingCall.senderId });
     setIncomingCall(null);
@@ -522,7 +522,7 @@ const MassagePage = () => {
 
   // End call
   const handleEndCall = () => {
-    stopRingtone(); // Stop ringtone when call ends
+    // Stop ringtone when call ends
     socketRef.current.emit("end-call", { receiverId: userDetail._id });
     cleanupCallState();
   };
@@ -533,7 +533,7 @@ const MassagePage = () => {
 
     const onIncoming = ({ senderId, offer }) => {
       console.log("Incoming call from", senderId);
-      playRingtone(); // Play ringtone on incoming call
+      // Play ringtone on incoming call
       setIncomingCall({ senderId, offer });
       setIsCalling(false);
     };
@@ -543,18 +543,18 @@ const MassagePage = () => {
       await setRemoteDescriptionAndAddCandidates(answer);
       setInCall(true);
       setIsCalling(false);
-      stopRingtone()
+     
       setCallConnected(true); // Caller side: mark connection established so timer starts
     };
 
     const onRejected = () => {
-      stopRingtone()
+      
       alert("Call rejected");
       cleanupCallState();
     };
 
     const onEnded = () => {
-      stopRingtone()
+      
       console.log("Call ended remotely");
       cleanupCallState();
     };
