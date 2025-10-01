@@ -5,7 +5,6 @@ const mongoose = require("mongoose");
 const MONGO_URL = process.env.MONGO_URL;
 const usersController = require('./controller/user.js')
 const User = require("./models/userSchema.js");
-const admin = require('firebase-admin');
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const cors = require('cors');
@@ -18,20 +17,7 @@ const wrapAsync = require('./wrapAsync.js');
 const frontendUrl = process.env.FRONTEND_URL;
 // const serviceAccount = require('./serviceAccountKey.json');
 
-// Firebase Admin initialization
-try {
-    if (!admin.apps.length) {
-        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-            admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-        } else {
-            admin.initializeApp(); // expects GOOGLE_APPLICATION_CREDENTIALS
-        }
-        console.log('Firebase Admin initialized');
-    }
-} catch (e) {
-    console.error('Firebase Admin init error:', e.message);
-}
+// Firebase Admin removed (notifications not in use)
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -50,8 +36,7 @@ redisClient.connect().then(() => {
 }).catch(console.error);
 
 const onlineUsers = new Map();
-// Simple in-memory throttle map to avoid spamming identical push notifications in rapid succession
-const lastPushMap = new Map(); // key: receiverId:senderId -> timestamp ms
+// Push notification throttle removed (notifications disabled)
 
 async function main() {
     await mongoose.connect(MONGO_URL);
@@ -197,40 +182,6 @@ io.on('connection', wrapSocketAsync(async (socket) => {
                 await redisClient.rPush(`offline_msgs:${receiver}`, JSON.stringify(minimal));
             }
             io.to(sender).emit("message-delivered", { receiver, timestamp });
-            // Push notification if offline and has fcmToken
-            if (!receiverOnline) {
-                try {
-                    const throttleKey = receiver + ':' + sender;
-                    const now = Date.now();
-                    const last = lastPushMap.get(throttleKey) || 0;
-                    if (now - last > 4000) { // at most one push per 4s per sender->receiver
-                        const receiverUser = await User.findById(receiver).select('fcmToken username');
-                        if (receiverUser?.fcmToken) {
-                            const deepLink = (frontendUrl || '').replace(/\/$/, '') + '/card/' + sender;
-                            const message = {
-                                token: receiverUser.fcmToken,
-                                notification: {
-                                    title: currentUser.username || 'New Message',
-                                    body: text ? text.slice(0, 100) : (imageUrl ? '📷 Image' : 'New message')
-                                },
-                                data: {
-                                    clickUrl: '/card/' + sender,
-                                    senderId: sender,
-                                    type: 'chat'
-                                },
-                                webpush: {
-                                    fcmOptions: { link: deepLink },
-                                    headers: { TTL: '60' }
-                                }
-                            };
-                            admin.messaging().send(message).catch(err => console.warn('FCM send error', err.message));
-                            lastPushMap.set(throttleKey, now);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('FCM logic error', e.message);
-                }
-            }
         }
     })
 
@@ -259,20 +210,9 @@ app.route("/card")
 app.route("/credential")
     .get(wrapAsync(usersController.credential))
 
-app.route('/me')
-    .get(wrapAsync(usersController.meFunction))
+// '/me' route removed; client relies on login response + local cache
 
-// Store FCM token for current user
-app.post('/fcm/register', wrapAsync(async (req, res) => {
-    const tokenCookie = req.cookies?.token;
-    if (!tokenCookie) return res.status(401).json({ success: false, message: 'unauthorized' });
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(tokenCookie, process.env.TOKEN_SCRETE);
-    const { fcmToken } = req.body || {};
-    if (!fcmToken) return res.status(400).json({ success: false, message: 'missing fcmToken' });
-    await User.findByIdAndUpdate(decoded.id, { fcmToken });
-    res.json({ success: true });
-}));
+// FCM registration endpoint removed (notifications disabled)
 
 // Fallback REST endpoint to fetch a user's public details by id (used if socket event misses)
 app.get('/user/:id', wrapAsync(async (req, res) => {
