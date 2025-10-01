@@ -1,4 +1,4 @@
-import  { useState, useEffect } from "react";
+import  { useState } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { Link, useNavigate } from 'react-router-dom';
@@ -73,17 +73,8 @@ export default function Signup() {
     }
   };
 
-  // Redirect authenticated users away from signup
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await axios.get(`${BACKEND_URL}/me`, { withCredentials: true });
-        if (!cancelled && res.data?.success) navigate('/card');
-      } catch { }
-    })();
-    return () => { cancelled = true; };
-  }, [BACKEND_URL, navigate]);
+  // Redirect authenticated users away from signup (local flag)
+  // if (localStorage.getItem('auth')) navigate('/card');
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center overflow-hidden"
