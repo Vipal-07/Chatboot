@@ -28,6 +28,7 @@ app.use(cors({
     credentials: true,
 }));
 
+
 const redisUrl = process.env.REDIS_URL;
 const redisClient = redis.createClient({ url: redisUrl });
 
